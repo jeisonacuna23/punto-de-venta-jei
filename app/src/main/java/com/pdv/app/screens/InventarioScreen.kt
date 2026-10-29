@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pdv.app.InventarioViewModel
 import com.pdv.app.data.Product
+import com.pdv.app.utils.formatCOP
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +67,7 @@ fun ProductoItem(producto: Product, onDelete: () -> Unit) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(producto.nombre, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                Text("Precio: $${producto.precio}", style = MaterialTheme.typography.bodyMedium)
+                Text("Precio: ${formatCOP(producto.precio)}", style = MaterialTheme.typography.bodyMedium)
                 Text("Stock: ${producto.stock} unidades", style = MaterialTheme.typography.bodySmall)
             }
             IconButton(onClick = onDelete) {
