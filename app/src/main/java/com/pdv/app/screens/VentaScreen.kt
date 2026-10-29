@@ -4,11 +4,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pdv.app.VentaViewModel
@@ -18,22 +23,30 @@ import com.pdv.app.utils.formatCOP
 @Composable
 fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
     val productos by viewModel.productos.collectAsState()
+    // Mapa que guarda el Producto y la cantidad seleccionada
     val carrito = remember { mutableStateMapOf<Product, Int>() }
+    
+    var showDialog by remember { mutableStateOf(false) }
+    var totalCobrado by remember { mutableStateOf(0.0) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Lista de productos disponibles
-        LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp)) {
+        // --- LISTA DE PRODUCTOS ---
+        Text("Toca para agregar al carrito", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+        
+        LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 16.dp)) {
             items(productos) { producto ->
+                val enCarrito = carrito[producto] ?: 0
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            if (producto.stock > (carrito[producto] ?: 0)) {
-                                carrito[producto] = (carrito[producto] ?: 0) + 1
+                            if (producto.stock > enCarrito) {
+                                carrito[producto] = enCarrito + 1
                             }
                         }
-                        .padding(vertical = 12.dp, horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
                         Text(producto.nombre, fontWeight = FontWeight.Bold)
@@ -45,7 +58,7 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
             }
         }
 
-        // Resumen del carrito y botón de cobro
+        // --- CARRITO ---
         if (carrito.isNotEmpty()) {
             Surface(
                 shadowElevation = 8.dp,
@@ -53,13 +66,43 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    carrito.forEach { (producto, cantidad) ->
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("${cantidad}x ${producto.nombre}")
-                            Text(formatCOP(producto.precio * cantidad))
+                    Text("Carrito de Venta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    // Iteramos sobre una copia de las entradas para evitar crasheos al eliminar
+                    carrito.entries.toList().forEach { (producto, cantidad) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(producto.nombre, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            
+                            // Botones para ajustar cantidad
+                            IconButton(onClick = {
+                                if (cantidad > 1) carrito[producto] = cantidad - 1 else carrito.remove(producto)
+                            }, modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Filled.Remove, contentDescription = "Menos", modifier = Modifier.size(20.dp))
+                            }
+                            
+                            Text("$cantidad", modifier = Modifier.padding(horizontal = 8.dp), fontWeight = FontWeight.Bold)
+                            
+                            IconButton(onClick = {
+                                if (producto.stock > cantidad) carrito[producto] = cantidad + 1
+                            }, modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Filled.Add, contentDescription = "Más", modifier = Modifier.size(20.dp))
+                            }
+                            
+                            Text(formatCOP(producto.precio * cantidad), modifier = Modifier.width(80.dp), textAlign = TextAlign.End, fontWeight = FontWeight.Bold)
+                            
+                            IconButton(onClick = { carrito.remove(producto) }, modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                            }
                         }
                     }
+                    
                     Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    
                     val total = carrito.entries.sumOf { it.key.precio * it.value }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -67,19 +110,36 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Total:", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text(formatCOP(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(formatCOP(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
+                    
                     Button(
                         onClick = {
+                            totalCobrado = total
                             viewModel.procesarVenta(carrito)
                             carrito.clear()
+                            showDialog = true
                         },
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
                     ) {
-                        Text("Cobrar")
+                        Text("Cobrar y Generar Venta")
                     }
                 }
             }
         }
+    }
+
+    // Diálogo de confirmación (Preparando el terreno para el Recibo)
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("¡Venta Exitosa!") },
+            text = { Text("Se ha registrado un cobro por ${formatCOP(totalCobrado)}.\nEl stock ha sido actualizado.") },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Aceptar")
+                }
+            }
+        )
     }
 }
