@@ -20,7 +20,7 @@ import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.max
 
-fun generarYCompartirRecibo(context: Context, venta: Venta) {
+fun generarReciboBitmap(context: Context, venta: Venta): Bitmap {
     val items = venta.detalles.split(" | ")
     val calculatedHeight = 550 + (items.size * 35)
     val finalHeight = max(calculatedHeight, 650)
@@ -105,9 +105,13 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
     paint.isFakeBoldText = false
     canvas.drawText("¡Gracias por su compra!", centerX, y, paint)
 
+    return bitmap
+}
+
+fun compartirRecibo(context: Context, bitmap: Bitmap, ventaId: Int) {
     val cachePath = File(context.cacheDir, "images")
     cachePath.mkdirs()
-    val file = File(cachePath, "recibo_VSJA${venta.id}.png")
+    val file = File(cachePath, "recibo_VSJA$ventaId.png")
     val stream = FileOutputStream(file)
     bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
     stream.close()

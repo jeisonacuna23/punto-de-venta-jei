@@ -70,10 +70,10 @@ class VentaViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val items = venta.detalles.split(" | ")
             items.forEach { item ->
-                val parts = item.split("x ", limit = 2)
+                val parts = item.split(" ", limit = 2)
                 if (parts.size == 2) {
                     val cantidad = parts[0].toIntOrNull() ?: 0
-                    val nombreProducto = parts[1].substringBefore(" @").trim()
+                    val nombreProducto = parts[1].substringBefore(" -").trim()
                     val producto = productDao.getProductByName(nombreProducto)
                     if (producto != null) {
                         productDao.updateProduct(producto.copy(stock = producto.stock + cantidad))
@@ -84,9 +84,9 @@ class VentaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun saldarDeuda(venta: Venta) {
+    fun saldarDeuda(venta: Venta, metodo: String) {
         viewModelScope.launch {
-            ventaDao.updateVenta(venta.copy(pagado = true))
+            ventaDao.updateVenta(venta.copy(pagado = true, metodoPago = metodo))
         }
     }
 }

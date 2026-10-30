@@ -29,27 +29,39 @@ fun HistorialScreen(viewModel: HistorialViewModel = viewModel(), ventaViewModel:
     val todasLasVentas by viewModel.ventas.collectAsState()
     var tabSeleccionada by remember { mutableStateOf(0) }
     var ventaAAnular by remember { mutableStateOf<Venta?>(null) }
+    var ventaASaldar by remember { mutableStateOf<Venta?>(null) }
 
     val ventas = if (tabSeleccionada == 0) todasLasVentas else todasLasVentas.filter { !it.pagado }
 
     val dateFormatToday = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     dateFormatToday.timeZone = TimeZone.getTimeZone("America/Caracas")
     val todayStr = dateFormatToday.format(Date())
+    
     val ventasHoy = todasLasVentas.filter { dateFormatToday.format(Date(it.fecha)) == todayStr }
-    val totalHoy = ventasHoy.sumOf { it.total }
+    val totalEfectivo = ventasHoy.filter { it.metodoPago == "Efectivo" && it.pagado }.sumOf { it.total }
+    val totalNequi = ventasHoy.filter { it.metodoPago == "Nequi" && it.pagado }.sumOf { it.total }
+    val totalFiado = ventasHoy.filter { !it.pagado }.sumOf { it.total }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // PANEL DE RESUMEN
+        // PANEL DE RESUMEN DESGLOSADO
         Card(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF5D4037))
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF30231F))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Resumen de Hoy", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Resumen de Hoy", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Ventas: ${ventasHoy.size}", color = Color.White)
-                    Text("Total: ${formatCOP(totalHoy)}", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Efectivo:", color = Color.White)
+                    Text(formatCOP(totalEfectivo), color = Color(0xFFE5D8CA), fontWeight = FontWeight.Bold)
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Nequi:", color = Color.White)
+                    Text(formatCOP(totalNequi), color = Color(0xFFE5D8CA), fontWeight = FontWeight.Bold)
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Fiados:", color = Color.White)
+                    Text(formatCOP(totalFiado), color = Color(0xFFE5D8CA), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -70,7 +82,7 @@ fun HistorialScreen(viewModel: HistorialViewModel = viewModel(), ventaViewModel:
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(ventas) { venta ->
-                    VentaItem(venta, onAnular = { ventaAAnular = venta }, onSaldar = { ventaViewModel.saldarDeuda(venta) })
+                    VentaItem(venta, onAnular = { ventaAAnular = venta }, onSaldar = { ventaASaldar = venta })
                 }
             }
         }
@@ -81,8 +93,36 @@ fun HistorialScreen(viewModel: HistorialViewModel = viewModel(), ventaViewModel:
             onDismissRequest = { ventaAAnular = null },
             title = { Text("Anular Venta") },
             text = { Text("¿Estás seguro de anular la venta VSJA-${String.format("%04d", ventaAAnular!!.id)}?") },
-            confirmButton = { TextButton(onClick = { ventaViewModel.anularVenta(ventaAAnular!!); ventaAAnular = null }) { Text("Anular", color = MaterialTheme.colorScheme.error) } },
+            confirmButton = { TextButton(onClick = { ventaViewModel.anularVenta(ventaAAnular!!); ventaAAnular = null }) { Text("Anular", color = Color.Red) } },
             dismissButton = { TextButton(onClick = { ventaAAnular = null }) { Text("Cancelar") } }
+        )
+    }
+
+    if (ventaASaldar != null) {
+        var metodo by remember { mutableStateOf("Efectivo") }
+        AlertDialog(
+            onDismissRequest = { ventaASaldar = null },
+            title = { Text("Saldar Deuda") },
+            text = {
+                Column {
+                    Text("Total a pagar: ${formatCOP(ventaASaldar!!.total)}", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = metodo == "Efectivo", onClick = { metodo = "Efectivo" })
+                        Text("Efectivo")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = metodo == "Nequi", onClick = { metodo = "Nequi" })
+                        Text("Nequi")
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    ventaViewModel.saldarDeuda(ventaASaldar!!, metodo)
+                    ventaASaldar = null
+                }) { Text("Confirmar Pago") }
+            },
+            dismissButton = { TextButton(onClick = { ventaASaldar = null }) { Text("Cancelar") } }
         )
     }
 }
@@ -93,10 +133,10 @@ fun VentaItem(venta: Venta, onAnular: () -> Unit, onSaldar: () -> Unit) {
     dateFormat.timeZone = TimeZone.getTimeZone("America/Caracas")
     val fechaStr = dateFormat.format(Date(venta.fecha))
 
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF))) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("VSJA-${String.format("%04d", venta.id)}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("VSJA-${String.format("%04d", venta.id)}", fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
                 Text(fechaStr, style = MaterialTheme.typography.bodySmall)
             }
             if (venta.cliente.isNotBlank()) Text("Cliente: ${venta.cliente}", fontWeight = FontWeight.Bold)
@@ -105,7 +145,7 @@ fun VentaItem(venta: Venta, onAnular: () -> Unit, onSaldar: () -> Unit) {
             Text(venta.detalles.replace(" | ", "\n"), style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Total: ${formatCOP(venta.total)}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("Total: ${formatCOP(venta.total)}", fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
                 Row {
                     if (!venta.pagado) {
                         IconButton(onClick = onSaldar) {
@@ -113,7 +153,7 @@ fun VentaItem(venta: Venta, onAnular: () -> Unit, onSaldar: () -> Unit) {
                         }
                     }
                     IconButton(onClick = onAnular) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Anular", tint = MaterialTheme.colorScheme.error)
+                        Icon(Icons.Filled.Delete, contentDescription = "Anular", tint = Color.Red)
                     }
                 }
             }

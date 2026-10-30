@@ -6,21 +6,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val MochaSilk = lightColorScheme(
-    primary = Color(0xFF5D4037),
+    primary = Color(0xFF5D4037),           // Marrón chocolate
     onPrimary = Color(0xFFFFFFFF),
     primaryContainer = Color(0xFF5D4037),
     onPrimaryContainer = Color(0xFFFFFFFF),
-    secondary = Color(0xFF795548),
+    secondary = Color(0xFF795548),         // Marrón medio
     onSecondary = Color(0xFFFFFFFF),
-    tertiary = Color(0xFFB98250),
+    secondaryContainer = Color(0xFFE5D8CA),
+    onSecondaryContainer = Color(0xFF30231F),
+    tertiary = Color(0xFFB98250),          // Caramelo
     onTertiary = Color(0xFFFFFFFF),
-    background = Color(0xFFF7F3ED),
-    onBackground = Color(0xFF30231F),
-    surface = Color(0xFFFFFFFF),
+    background = Color(0xFFF7F3ED),        // Crema suave
+    onBackground = Color(0xFF30231F),      // Marrón oscuro
+    surface = Color(0xFFFFFFFF),           // Blanco cálido
     onSurface = Color(0xFF30231F),
-    surfaceVariant = Color(0xFFF7F3ED),
+    surfaceVariant = Color(0xFFFFFFFF),    // Forzado a blanco para evitar lavanda
     onSurfaceVariant = Color(0xFF30231F),
-    outline = Color(0xFFE5D8CA)
+    surfaceTint = Color(0xFF5D4037),       // Evita tintes extraños en cards
+    outline = Color(0xFFE5D8CA)            // Beige
 )
 
 @Composable

@@ -52,14 +52,12 @@ fun MainScreen() {
             Toast.makeText(context, "Productos exportados", Toast.LENGTH_SHORT).show()
         }
     }
-    
     val exportSalesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         uri?.let {
             exportarVentasCSV(context, it, historialViewModel.ventas.value)
             Toast.makeText(context, "Ventas exportadas", Toast.LENGTH_SHORT).show()
         }
     }
-
     val importProductsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
             importarProductosCSV(context, it) { productos ->
@@ -72,14 +70,11 @@ fun MainScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(items[selectedItem].first) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFFF7F3ED),
-                    titleContentColor = Color(0xFF30231F)
-                ),
+                title = { Text(items[selectedItem].first, color = Color.White) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF30231F)),
                 actions = {
                     IconButton(onClick = { showBackupMenu = true }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = "Opciones", tint = Color(0xFF30231F))
+                        Icon(Icons.Filled.MoreVert, contentDescription = "Opciones", tint = Color.White)
                     }
                     DropdownMenu(expanded = showBackupMenu, onDismissRequest = { showBackupMenu = false }) {
                         DropdownMenuItem(text = { Text("Exportar Inventario (CSV)") }, onClick = { exportProductsLauncher.launch("inventario.csv"); showBackupMenu = false })
@@ -90,10 +85,7 @@ fun MainScreen() {
             )
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = Color(0xFFF7F3ED), // Color crema forzado
-                contentColor = Color(0xFF30231F)
-            ) {
+            NavigationBar(containerColor = Color(0xFFF7F3ED)) {
                 items.forEachIndexed { index, item ->
                     NavigationBarItem(
                         icon = { Icon(item.second, contentDescription = item.first) },
@@ -101,11 +93,11 @@ fun MainScreen() {
                         selected = selectedItem == index,
                         onClick = { selectedItem = index },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color(0xFF5D4037),
-                            selectedTextColor = Color(0xFF5D4037),
-                            indicatorColor = Color(0xFFE5D8CA), // Beige
-                            unselectedIconColor = Color(0xFF30231F).copy(alpha = 0.6f),
-                            unselectedTextColor = Color(0xFF30231F).copy(alpha = 0.6f)
+                            selectedIconColor = Color.White,
+                            selectedTextColor = Color(0xFF30231F),
+                            indicatorColor = Color(0xFF5D4037), // Marrón chocolate
+                            unselectedIconColor = Color(0xFF795548),
+                            unselectedTextColor = Color(0xFF30231F)
                         )
                     )
                 }

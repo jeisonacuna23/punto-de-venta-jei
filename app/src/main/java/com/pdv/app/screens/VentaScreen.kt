@@ -5,9 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,12 +34,26 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
     var showExitoDialog by remember { mutableStateOf(false) }
     var ventaParaRecibo by remember { mutableStateOf<com.pdv.app.data.Venta?>(null) }
     var itemAEliminar by remember { mutableStateOf<Product?>(null) }
+    var showAlertaCliente by remember { mutableStateOf(false) }
     
     val context = LocalContext.current
     val productosFiltrados = productos.filter { it.nombre.contains(searchQuery, ignoreCase = true) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        // CLIENTE OBLIGATORIO ARRIBA
+        OutlinedTextField(
+            value = cliente,
+            onValueChange = { viewModel.cliente = it },
+            label = { Text("Nombre del Cliente (Obligatorio) *") },
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFF5D4037),
+                unfocusedBorderColor = if (cliente.isEmpty()) Color.Red else Color(0xFFE5D8CA)
+            )
+        )
+
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -54,17 +66,24 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                 )
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = { showRapidaDialog = true }) { Text("Rápida") }
+            Button(onClick = { 
+                if (cliente.isBlank()) showAlertaCliente = true 
+                else showRapidaDialog = true 
+            }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF795548))) { Text("Rápida") }
         }
         
-        LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 16.dp)) {
+        LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp)) {
             items(productosFiltrados) { producto ->
                 val enCarrito = carrito[producto] ?: 0
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            if (producto.stock > enCarrito) carrito[producto] = enCarrito + 1
+                            if (cliente.isBlank()) {
+                                showAlertaCliente = true
+                            } else if (producto.stock > enCarrito) {
+                                carrito[producto] = enCarrito + 1
+                            }
                         }
                         .padding(vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -81,11 +100,7 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
         }
 
         if (carrito.isNotEmpty()) {
-            Surface(
-                shadowElevation = 8.dp,
-                color = Color(0xFFF7F3ED),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Surface(shadowElevation = 8.dp, color = Color(0xFFF7F3ED), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Carrito de Venta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
@@ -116,38 +131,28 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                     }
                     
                     Divider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFE5D8CA))
-
-                    OutlinedTextField(
-                        value = cliente,
-                        onValueChange = { viewModel.cliente = it },
-                        label = { Text("Nombre del Cliente (Opcional)") },
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFF5D4037),
-                            unfocusedBorderColor = Color(0xFFE5D8CA)
-                        )
-                    )
-                    
                     val total = carrito.entries.sumOf { it.key.precio * it.value }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("Total:", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(formatCOP(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
-                    
                     Button(
                         onClick = { showPagoDialog = true },
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                    ) {
-                        Text("Cobrar")
-                    }
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5D4037))
+                    ) { Text("Cobrar") }
                 }
             }
         }
+    }
+
+    if (showAlertaCliente) {
+        AlertDialog(
+            onDismissRequest = { showAlertaCliente = false },
+            title = { Text("Cliente Requerido") },
+            text = { Text("Por favor, ingrese el nombre del cliente antes de agregar productos.") },
+            confirmButton = { TextButton(onClick = { showAlertaCliente = false }) { Text("Entendido") } }
+        )
     }
 
     if (showPagoDialog) {
@@ -170,7 +175,7 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = metodo == "Fiado", onClick = { metodo = "Fiado" })
-                        Text("Fiado (Queda debiendo)")
+                        Text("Fiado (Pendiente)")
                     }
                 }
             },
@@ -193,7 +198,7 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
             onDismissRequest = { itemAEliminar = null },
             title = { Text("Quitar del carrito") },
             text = { Text("¿Estás seguro de quitar ${itemAEliminar!!.nombre} de la venta?") },
-            confirmButton = { TextButton(onClick = { carrito.remove(itemAEliminar); itemAEliminar = null }) { Text("Quitar", color = MaterialTheme.colorScheme.error) } },
+            confirmButton = { TextButton(onClick = { carrito.remove(itemAEliminar); itemAEliminar = null }) { Text("Quitar", color = Color.Red) } },
             dismissButton = { TextButton(onClick = { itemAEliminar = null }) { Text("Cancelar") } }
         )
     }
@@ -230,14 +235,9 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
             title = { Text("¡Venta Exitosa!") },
             text = { Text("Se ha registrado un cobro por ${formatCOP(ventaParaRecibo!!.total)}.\nEl stock ha sido actualizado.") },
             confirmButton = {
-                Button(onClick = {
-                    showExitoDialog = false
-                    generarYCompartirRecibo(context, ventaParaRecibo!!)
-                }) { Text("Compartir Recibo") }
+                Button(onClick = { showExitoDialog = false; generarYCompartirRecibo(context, ventaParaRecibo!!) }) { Text("Compartir Recibo") }
             },
-            dismissButton = {
-                TextButton(onClick = { showExitoDialog = false }) { Text("Cerrar") }
-            }
+            dismissButton = { TextButton(onClick = { showExitoDialog = false }) { Text("Cerrar") } }
         )
     }
 }
