@@ -8,6 +8,9 @@ interface ProductDao {
     @Query("SELECT * FROM productos ORDER BY nombre ASC")
     fun getAllProducts(): Flow<List<Product>>
 
+    @Query("SELECT * FROM productos WHERE nombre = :nombre LIMIT 1")
+    suspend fun getProductByName(nombre: String): Product?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProduct(product: Product)
 

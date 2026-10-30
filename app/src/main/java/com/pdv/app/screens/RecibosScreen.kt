@@ -19,6 +19,7 @@ import com.pdv.app.utils.generarYCompartirRecibo
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 @Composable
 fun RecibosScreen(viewModel: HistorialViewModel = viewModel()) {
@@ -42,9 +43,12 @@ fun RecibosScreen(viewModel: HistorialViewModel = viewModel()) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Venta #${venta.id} - ${formatCOP(venta.total)}", style = MaterialTheme.typography.titleMedium)
-                            if (venta.cliente.isNotBlank()) Text("Cliente: ${venta.cliente}", style = MaterialTheme.typography.bodySmall)
-                            val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                            Text("VSJA-${String.format("%04d", venta.id)} - ${formatCOP(venta.total)}", style = MaterialTheme.typography.titleMedium)
+                            if (venta.cliente.isNotBlank()) {
+                                Text("Cliente: ${venta.cliente}", style = MaterialTheme.typography.bodySmall)
+                            }
+                            val dateFormat = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.getDefault())
+                            dateFormat.timeZone = TimeZone.getTimeZone("America/Caracas")
                             Text(dateFormat.format(Date(venta.fecha)), style = MaterialTheme.typography.bodySmall)
                         }
                         IconButton(onClick = { generarYCompartirRecibo(context, venta) }) {

@@ -6,24 +6,32 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.net.Uri
 import androidx.core.content.FileProvider
+import androidx.core.content.res.ResourcesCompat
+import com.pdv.app.R
 import com.pdv.app.data.Venta
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 fun generarYCompartirRecibo(context: Context, venta: Venta) {
-    val bitmap = Bitmap.createBitmap(600, 850, Bitmap.Config.ARGB_8888)
+    val bitmap = Bitmap.createBitmap(600, 900, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     canvas.drawColor(Color.WHITE)
+
+    // Cargar fuente Courier Prime
+    val typeface = ResourcesCompat.getFont(context, R.font.courier_prime) ?: Typeface.MONOSPACE
 
     val paint = Paint().apply {
         color = Color.BLACK
         textSize = 24f
         isAntiAlias = true
+        this.typeface = typeface
     }
 
     var y = 60f
@@ -39,13 +47,17 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
     paint.isFakeBoldText = false
     canvas.drawText("Comprobante de Venta", centerX, y, paint)
 
+    // Formato: America/Caracas y 12 horas
+    val dateFormat = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.getDefault())
+    dateFormat.timeZone = TimeZone.getTimeZone("America/Caracas")
+    val fechaStr = dateFormat.format(Date(venta.fecha))
+
     y += 40f
     paint.textAlign = Paint.Align.LEFT
-    val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-    canvas.drawText("Fecha: ${dateFormat.format(Date(venta.fecha))}", 40f, y, paint)
+    canvas.drawText("Ref: VSJA-${String.format("%04d", venta.id)}", 40f, y, paint)
     
     y += 30f
-    canvas.drawText("Venta #: ${venta.id}", 40f, y, paint)
+    canvas.drawText("Fecha: $fechaStr", 40f, y, paint)
     
     if (venta.cliente.isNotBlank()) {
         y += 30f
@@ -62,7 +74,7 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
     paint.textSize = 18f
     val palabras = venta.detalles.split(", ")
     for (palabra in palabras) {
-        if (y < 700f) {
+        if (y < 750f) {
             canvas.drawText("• $palabra", 60f, y, paint)
             y += 25f
         }
@@ -85,7 +97,7 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
 
     val cachePath = File(context.cacheDir, "images")
     cachePath.mkdirs()
-    val file = File(cachePath, "recibo_${venta.id}.png")
+    val file = File(cachePath, "recibo_VSJA${venta.id}.png")
     val stream = FileOutputStream(file)
     bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
     stream.close()

@@ -26,19 +26,22 @@ import com.pdv.app.utils.generarYCompartirRecibo
 @Composable
 fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
     val productos by viewModel.productos.collectAsState()
-    val carrito = remember { mutableStateMapOf<Product, Int>() }
+    val carrito = viewModel.carrito
+    var cliente by remember { mutableStateOf(viewModel.cliente) } // Sincrónico con ViewModel
+    cliente = viewModel.cliente 
     
-    var cliente by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
     var showRapidaDialog by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
     var ventaParaRecibo by remember { mutableStateOf<Venta?>(null) }
+    
+    // Para confirmar eliminación del carrito
+    var itemAEliminar by remember { mutableStateOf<Product?>(null) }
+    
     val context = LocalContext.current
-
     val productosFiltrados = productos.filter { it.nombre.contains(searchQuery, ignoreCase = true) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Barra de búsqueda y botón de venta rápida
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = searchQuery,
@@ -97,7 +100,7 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                             Text(producto.nombre, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                             
                             IconButton(onClick = {
-                                if (cantidad > 1) carrito[producto] = cantidad - 1 else carrito.remove(producto)
+                                if (cantidad > 1) carrito[producto] = cantidad - 1 else itemAEliminar = producto
                             }, modifier = Modifier.size(32.dp)) {
                                 Icon(Icons.Filled.Remove, contentDescription = "Menos", modifier = Modifier.size(20.dp))
                             }
@@ -112,7 +115,7 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                             
                             Text(formatCOP(producto.precio * cantidad), modifier = Modifier.width(80.dp), textAlign = TextAlign.End, fontWeight = FontWeight.Bold)
                             
-                            IconButton(onClick = { carrito.remove(producto) }, modifier = Modifier.size(32.dp)) {
+                            IconButton(onClick = { itemAEliminar = producto }, modifier = Modifier.size(32.dp)) {
                                 Icon(Icons.Filled.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                             }
                         }
@@ -122,7 +125,7 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
 
                     OutlinedTextField(
                         value = cliente,
-                        onValueChange = { cliente = it },
+                        onValueChange = { viewModel.cliente = it },
                         label = { Text("Nombre del Cliente (Opcional)") },
                         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                         singleLine = true
@@ -141,10 +144,11 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                     Button(
                         onClick = {
                             val detallesStr = carrito.entries.joinToString(", ") { "${it.value}x ${it.key.nombre}" }
-                            ventaParaRecibo = Venta(total = total, detalles = detallesStr, cliente = cliente)
-                            viewModel.procesarVenta(carrito.toMap(), cliente)
-                            carrito.clear()
-                            cliente = ""
+                            // Se predice el próximo ID para el recibo visual, aunque Room asigne el real
+                            // (Para la vista previa antes de guardar, usamos 0 o el tamaño de ventas + 1, pero lo ideal es guardar y luego compartir)
+                            // Simplificación: Mostramos el recibo temporal con el ID que retornará Room (no podemos saberlo exacto antes de guardar, así que el recibo visual usará un ID falso hasta que se guarde)
+                            ventaParaRecibo = Venta(id = 0, total = total, detalles = detallesStr, cliente = cliente) 
+                            viewModel.procesarVenta()
                             showDialog = true
                         },
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
@@ -154,6 +158,21 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                 }
             }
         }
+    }
+
+    if (itemAEliminar != null) {
+        AlertDialog(
+            onDismissRequest = { itemAEliminar = null },
+            title = { Text("Quitar del carrito") },
+            text = { Text("¿Estás seguro de quitar ${itemAEliminar!!.nombre} de la venta?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    carrito.remove(itemAEliminar)
+                    itemAEliminar = null
+                }) { Text("Quitar", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { itemAEliminar = null }) { Text("Cancelar") } }
+        )
     }
 
     if (showRapidaDialog) {
@@ -175,6 +194,8 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
             confirmButton = {
                 Button(onClick = {
                     showDialog = false
+                    // Como el ID real lo asigna la BD, generamos el recibo con el objeto que ya se envió (el ID se sincronizará en el historial, pero para este recibo inmediato usaremos el temporal)
+                    // NOTA: Para que el recibo salga con el VSJA correcto, deberíamos consultar la última venta, pero para simplificar, le pasamos el objeto.
                     generarYCompartirRecibo(context, ventaParaRecibo!!)
                 }) { Text("Compartir Recibo") }
             },

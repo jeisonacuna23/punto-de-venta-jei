@@ -24,6 +24,7 @@ fun InventarioScreen(viewModel: InventarioViewModel = viewModel()) {
     val productos by viewModel.productos.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     var productoEditando by remember { mutableStateOf<Product?>(null) }
+    var productoAEliminar by remember { mutableStateOf<Product?>(null) }
     var searchQuery by remember { mutableStateOf("") }
 
     val productosFiltrados = productos.filter { it.nombre.contains(searchQuery, ignoreCase = true) }
@@ -64,12 +65,27 @@ fun InventarioScreen(viewModel: InventarioViewModel = viewModel()) {
                                 productoEditando = producto
                                 showDialog = true 
                             },
-                            onDelete = { viewModel.eliminarProducto(producto) }
+                            onDelete = { productoAEliminar = producto }
                         )
                     }
                 }
             }
         }
+    }
+
+    if (productoAEliminar != null) {
+        AlertDialog(
+            onDismissRequest = { productoAEliminar = null },
+            title = { Text("Eliminar Producto") },
+            text = { Text("¿Estás seguro de eliminar '${productoAEliminar!!.nombre}' del inventario?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.eliminarProducto(productoAEliminar!!)
+                    productoAEliminar = null
+                }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { productoAEliminar = null }) { Text("Cancelar") } }
+        )
     }
 
     if (showDialog) {
