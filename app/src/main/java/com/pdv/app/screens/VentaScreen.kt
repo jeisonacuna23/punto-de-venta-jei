@@ -116,7 +116,7 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                     Button(
                         onClick = {
                             totalCobrado = total
-                            viewModel.procesarVenta(carrito)
+                            viewModel.procesarVenta(carrito.toMap())
                             carrito.clear()
                             showDialog = true
                         },
