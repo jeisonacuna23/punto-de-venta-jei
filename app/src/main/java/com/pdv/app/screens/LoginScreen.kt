@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -19,7 +20,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("pdv_prefs", Context.MODE_PRIVATE) }
     
-    // Si no hay PIN guardado, entramos en modo "Crear PIN". Si hay, en modo "Ingresar PIN".
     val savedPin = prefs.getString("pin", null)
     val isSetupMode = savedPin == null
 
@@ -31,13 +31,15 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("PUNTO DE VENTA", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
-        Spacer(modifier = Modifier.height(16.dp))
+        Text("PDB", style = MaterialTheme.typography.displayLarge, fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
+        Text("Variedades y Servicios PDB", style = MaterialTheme.typography.titleMedium, color = Color(0xFF30231F), textAlign = TextAlign.Center)
+        Spacer(modifier = Modifier.height(32.dp))
         
         Text(
             if (isSetupMode) "Crea un PIN de 4 dígitos para proteger tu app" else "Ingresa tu PIN de 4 dígitos",
             style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFF30231F)
+            color = Color(0xFF30231F),
+            textAlign = TextAlign.Center
         )
         
         Spacer(modifier = Modifier.height(24.dp))
@@ -68,17 +70,10 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             onClick = {
                 if (pin.length == 4) {
                     if (isSetupMode) {
-                        // Guardar el nuevo PIN
                         prefs.edit().putString("pin", pin).apply()
                         onLoginSuccess()
                     } else {
-                        // Verificar el PIN existente
-                        if (pin == savedPin) {
-                            onLoginSuccess()
-                        } else {
-                            error = true
-                            pin = ""
-                        }
+                        if (pin == savedPin) onLoginSuccess() else { error = true; pin = "" }
                     }
                 }
             },

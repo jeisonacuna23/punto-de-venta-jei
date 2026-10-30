@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pdv.app.screens.*
 import com.pdv.app.ui.theme.PdvTheme
@@ -47,6 +48,8 @@ fun AppNavigation() {
 fun MainScreen(onLogout: () -> Unit) {
     var selectedItem by remember { mutableStateOf(0) }
     var showMenu by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    
     val context = LocalContext.current
     val inventarioViewModel: InventarioViewModel = viewModel()
     val historialViewModel: HistorialViewModel = viewModel()
@@ -78,14 +81,13 @@ fun MainScreen(onLogout: () -> Unit) {
                         Icon(Icons.Filled.MoreVert, contentDescription = "Opciones", tint = Color.White)
                     }
                     DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(text = { Text("Configurar Recibo / Negocio") }, onClick = { showSettingsDialog = true; showMenu = false })
+                        HorizontalDivider(color = Color(0xFFE5D8CA))
                         DropdownMenuItem(text = { Text("Exportar Inventario (CSV)") }, onClick = { exportProductsLauncher.launch("inventario.csv"); showMenu = false })
                         DropdownMenuItem(text = { Text("Exportar Ventas (CSV)") }, onClick = { exportSalesLauncher.launch("ventas.csv"); showMenu = false })
                         DropdownMenuItem(text = { Text("Importar Inventario (CSV)") }, onClick = { importProductsLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "application/csv")); showMenu = false })
-                        HorizontalDivider()
-                        DropdownMenuItem(text = { Text("Cerrar Sesión", color = Color.Red) }, onClick = { 
-                            showMenu = false
-                            onLogout() 
-                        })
+                        HorizontalDivider(color = Color(0xFFE5D8CA))
+                        DropdownMenuItem(text = { Text("Cerrar Sesión", color = Color.Red) }, onClick = { showMenu = false; onLogout() })
                     }
                 }
             )
@@ -119,4 +121,48 @@ fun MainScreen(onLogout: () -> Unit) {
             }
         }
     }
+
+    if (showSettingsDialog) {
+        SettingsDialog(onDismiss = { showSettingsDialog = false })
+    }
+}
+
+@Composable
+fun SettingsDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("pdv_prefs", Context.MODE_PRIVATE) }
+    
+    var bizName by remember { mutableStateOf(prefs.getString("biz_name", "VARIEDADES Y SERVICIOS PDB") ?: "") }
+    var bizPhone by remember { mutableStateOf(prefs.getString("biz_phone", "") ?: "") }
+    var bizAddress by remember { mutableStateOf(prefs.getString("biz_address", "") ?: "") }
+    var bizFooter by remember { mutableStateOf(prefs.getString("biz_footer", "¡Gracias por su compra!") ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        title = { Text("Configuración del Recibo", color = Color(0xFF5D4037), fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(value = bizName, onValueChange = { bizName = it }, label = { Text("Nombre del Negocio") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = bizPhone, onValueChange = { bizPhone = it }, label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = bizAddress, onValueChange = { bizAddress = it }, label = { Text("Dirección") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(value = bizFooter, onValueChange = { bizFooter = it }, label = { Text("Mensaje Final (Pie de página)") }, modifier = Modifier.fillMaxWidth(), maxLines = 2)
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                prefs.edit()
+                    .putString("biz_name", bizName)
+                    .putString("biz_phone", bizPhone)
+                    .putString("biz_address", bizAddress)
+                    .putString("biz_footer", bizFooter)
+                    .apply()
+                Toast.makeText(context, "Datos guardados", Toast.LENGTH_SHORT).show()
+                onDismiss()
+            }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5D4037))) { Text("Guardar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar", color = Color.Gray) }
+        }
+    )
 }

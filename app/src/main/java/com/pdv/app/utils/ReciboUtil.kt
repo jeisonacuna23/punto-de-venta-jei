@@ -21,9 +21,15 @@ import java.util.TimeZone
 import kotlin.math.max
 
 fun generarReciboBitmap(context: Context, venta: Venta): Bitmap {
+    val prefs = context.getSharedPreferences("pdv_prefs", Context.MODE_PRIVATE)
+    val bizName = prefs.getString("biz_name", "VARIEDADES Y SERVICIOS PDB") ?: "VARIEDADES Y SERVICIOS PDB"
+    val bizPhone = prefs.getString("biz_phone", "") ?: ""
+    val bizAddress = prefs.getString("biz_address", "") ?: ""
+    val bizFooter = prefs.getString("biz_footer", "¡Gracias por su compra!") ?: "¡Gracias por su compra!"
+
     val items = venta.detalles.split(" | ")
-    val calculatedHeight = 550 + (items.size * 35)
-    val finalHeight = max(calculatedHeight, 650)
+    val calculatedHeight = 600 + (items.size * 35)
+    val finalHeight = max(calculatedHeight, 700)
     
     val bitmap = Bitmap.createBitmap(600, finalHeight, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
@@ -42,21 +48,36 @@ fun generarReciboBitmap(context: Context, venta: Venta): Bitmap {
     val centerX = 300f
 
     paint.textAlign = Paint.Align.CENTER
-    paint.textSize = 36f
-    paint.isFakeBoldText = true
-    canvas.drawText("PUNTO DE VENTA", centerX, y, paint)
     
-    y += 40f
-    paint.textSize = 20f
+    // CABECERA DEL NEGOCIO
+    paint.textSize = 32f
+    paint.isFakeBoldText = true
+    canvas.drawText(bizName.uppercase(), centerX, y, paint)
+    
+    paint.textSize = 16f
     paint.isFakeBoldText = false
+    if (bizAddress.isNotBlank()) {
+        y += 25f
+        canvas.drawText(bizAddress, centerX, y, paint)
+    }
+    if (bizPhone.isNotBlank()) {
+        y += 25f
+        canvas.drawText("Tel: $bizPhone", centerX, y, paint)
+    }
+
+    y += 35f
+    paint.textSize = 20f
+    paint.isFakeBoldText = true
     canvas.drawText("Comprobante de Venta", centerX, y, paint)
 
+    // DATOS DE LA VENTA
     val dateFormat = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.getDefault())
     dateFormat.timeZone = TimeZone.getTimeZone("America/Caracas")
     val fechaStr = dateFormat.format(Date(venta.fecha))
 
     y += 40f
     paint.textAlign = Paint.Align.LEFT
+    paint.isFakeBoldText = false
     canvas.drawText("Ref: VSJA-${String.format("%04d", venta.id)}", 40f, y, paint)
     
     y += 30f
@@ -73,6 +94,7 @@ fun generarReciboBitmap(context: Context, venta: Venta): Bitmap {
     y += 30f
     canvas.drawText("----------------------------------------", 40f, y, paint)
 
+    // PRODUCTOS
     y += 40f
     paint.textSize = 18f
     for (item in items) {
@@ -103,7 +125,7 @@ fun generarReciboBitmap(context: Context, venta: Venta): Bitmap {
 
     paint.textSize = 18f
     paint.isFakeBoldText = false
-    canvas.drawText("¡Gracias por su compra!", centerX, y, paint)
+    canvas.drawText(bizFooter, centerX, y, paint)
 
     return bitmap
 }
