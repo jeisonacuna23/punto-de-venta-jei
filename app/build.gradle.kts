@@ -19,10 +19,10 @@ android {
 
     signingConfigs {
         create("release") {
-            // Lee las variables de entorno de GitHub Actions
             val keystorePath = System.getenv("KEYSTORE_FILE")
             if (keystorePath != null) {
-                storeFile = file(keystorePath)
+                // AQUÍ ESTÁ LA MAGIA: Usar rootProject.file() en vez de file()
+                storeFile = rootProject.file(keystorePath)
                 storePassword = System.getenv("KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("KEY_ALIAS")
                 keyPassword = System.getenv("KEY_PASSWORD")
