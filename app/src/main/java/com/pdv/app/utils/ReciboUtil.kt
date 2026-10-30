@@ -18,13 +18,19 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.max
 
 fun generarYCompartirRecibo(context: Context, venta: Venta) {
-    val bitmap = Bitmap.createBitmap(600, 900, Bitmap.Config.ARGB_8888)
+    val items = venta.detalles.split(" | ")
+    
+    // Altura dinámica: Base de 500px + 35px por cada producto
+    val calculatedHeight = 500 + (items.size * 35)
+    val finalHeight = max(calculatedHeight, 600)
+    
+    val bitmap = Bitmap.createBitmap(600, finalHeight, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     canvas.drawColor(Color.WHITE)
 
-    // Cargar fuente Courier Prime
     val typeface = ResourcesCompat.getFont(context, R.font.courier_prime) ?: Typeface.MONOSPACE
 
     val paint = Paint().apply {
@@ -47,7 +53,6 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
     paint.isFakeBoldText = false
     canvas.drawText("Comprobante de Venta", centerX, y, paint)
 
-    // Formato: America/Caracas y 12 horas
     val dateFormat = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.getDefault())
     dateFormat.timeZone = TimeZone.getTimeZone("America/Caracas")
     val fechaStr = dateFormat.format(Date(venta.fecha))
@@ -68,19 +73,13 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
     canvas.drawText("----------------------------------------", 40f, y, paint)
 
     y += 40f
-    canvas.drawText("Detalles:", 40f, y, paint)
-    
-    y += 30f
     paint.textSize = 18f
-    val palabras = venta.detalles.split(", ")
-    for (palabra in palabras) {
-        if (y < 750f) {
-            canvas.drawText("• $palabra", 60f, y, paint)
-            y += 25f
-        }
+    for (item in items) {
+        canvas.drawText("• $item", 40f, y, paint)
+        y += 30f
     }
 
-    y += 20f
+    y += 10f
     paint.textSize = 24f
     paint.isFakeBoldText = true
     canvas.drawText("----------------------------------------", 40f, y, paint)

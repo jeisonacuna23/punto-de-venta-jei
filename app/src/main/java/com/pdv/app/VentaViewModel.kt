@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.pdv.app.data.AppDatabase
 import com.pdv.app.data.Product
 import com.pdv.app.data.Venta
+import com.pdv.app.utils.formatCOP
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -25,7 +26,6 @@ class VentaViewModel(application: Application) : AndroidViewModel(application) {
         initialValue = emptyList()
     )
 
-    // ESTADO PERSISTENTE DEL CARRITO Y CLIENTE
     val carrito = mutableStateMapOf<Product, Int>()
     var cliente by mutableStateOf("")
 
@@ -35,7 +35,10 @@ class VentaViewModel(application: Application) : AndroidViewModel(application) {
         val clienteCopia = cliente
         
         viewModelScope.launch {
-            val detallesStr = carritoCopia.entries.joinToString(", ") { "${it.value}x ${it.key.nombre}" }
+            // Nuevo formato: "2x Pan @ $2.000 = $4.000 | 1x Leche @ $3.500 = $3.500"
+            val detallesStr = carritoCopia.entries.joinToString(" | ") { 
+                "${it.value}x ${it.key.nombre} @ ${formatCOP(it.key.precio)} = ${formatCOP(it.key.precio * it.value)}" 
+            }
             val total = carritoCopia.entries.sumOf { it.key.precio * it.value }
             
             ventaDao.insertVenta(Venta(total = total, detalles = detallesStr, cliente = clienteCopia))
@@ -55,20 +58,19 @@ class VentaViewModel(application: Application) : AndroidViewModel(application) {
 
     fun anularVenta(venta: Venta) {
         viewModelScope.launch {
-            // 1. Devolver el stock
-            val items = venta.detalles.split(", ")
+            val items = venta.detalles.split(" | ")
             items.forEach { item ->
                 val parts = item.split("x ", limit = 2)
                 if (parts.size == 2) {
                     val cantidad = parts[0].toIntOrNull() ?: 0
-                    val nombreProducto = parts[1]
+                    // Extraemos solo el nombre, ignorando el precio unitario y el total
+                    val nombreProducto = parts[1].substringBefore(" @").trim()
                     val producto = productDao.getProductByName(nombreProducto)
                     if (producto != null) {
                         productDao.updateProduct(producto.copy(stock = producto.stock + cantidad))
                     }
                 }
             }
-            // 2. Eliminar la venta
             ventaDao.deleteVenta(venta)
         }
     }

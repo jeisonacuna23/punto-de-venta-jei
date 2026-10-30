@@ -21,23 +21,60 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistorialScreen(viewModel: HistorialViewModel = viewModel(), ventaViewModel: VentaViewModel = viewModel()) {
     val ventas by viewModel.ventas.collectAsState()
     var ventaAAnular by remember { mutableStateOf<Venta?>(null) }
 
-    if (ventas.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No hay ventas registradas.", style = MaterialTheme.typography.bodyLarge)
+    // Calcular estadísticas del día (Zona horaria Venezuela)
+    val dateFormatToday = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    dateFormatToday.timeZone = TimeZone.getTimeZone("America/Caracas")
+    val todayStr = dateFormatToday.format(Date())
+
+    val ventasHoy = ventas.filter {
+        dateFormatToday.format(Date(it.fecha)) == todayStr
+    }
+
+    val totalHoy = ventasHoy.sumOf { it.total }
+    var itemsHoy = 0
+    ventasHoy.forEach { venta ->
+        venta.detalles.split(" | ").forEach { item ->
+            val qty = item.substringBefore("x").trim().toIntOrNull() ?: 0
+            itemsHoy += qty
         }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // PANEL DE RESUMEN
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         ) {
-            items(ventas) { venta ->
-                VentaItem(venta, onAnular = { ventaAAnular = venta })
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Resumen de Hoy", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Ventas realizadas: ${ventasHoy.size}", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text("Total: ${formatCOP(totalHoy)}", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                }
+                Text("Productos vendidos: $itemsHoy", color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+
+        if (ventas.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No hay ventas registradas.", style = MaterialTheme.typography.bodyLarge)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(ventas) { venta ->
+                    VentaItem(venta, onAnular = { ventaAAnular = venta })
+                }
             }
         }
     }
@@ -64,21 +101,21 @@ fun VentaItem(venta: Venta, onAnular: () -> Unit) {
     dateFormat.timeZone = TimeZone.getTimeZone("America/Caracas")
     val fechaStr = dateFormat.format(Date(venta.fecha))
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("VSJA-${String.format("%04d", venta.id)}", fontWeight = FontWeight.Bold)
-                Text(fechaStr, style = MaterialTheme.typography.bodySmall)
+                Text("VSJA-${String.format("%04d", venta.id)}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(fechaStr, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (venta.cliente.isNotBlank()) {
-                Text("Cliente: ${venta.cliente}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text("Cliente: ${venta.cliente}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(venta.detalles, style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(venta.detalles.replace(" | ", "\n"), style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
