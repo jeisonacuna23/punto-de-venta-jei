@@ -30,7 +30,7 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
     var cliente by remember { mutableStateOf(viewModel.cliente) }
     cliente = viewModel.cliente 
     
-    var searchQuery by remember { mutableStateOf("") }
+    var showSearchDialog by remember { mutableStateOf(false) }
     var showRapidaDialog by remember { mutableStateOf(false) }
     var showPagoDialog by remember { mutableStateOf(false) }
     var showExitoDialog by remember { mutableStateOf(false) }
@@ -39,10 +39,9 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
     var showAlertaCliente by remember { mutableStateOf(false) }
     
     val context = LocalContext.current
-    val productosFiltrados = productos.filter { it.nombre.contains(searchQuery, ignoreCase = true) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // CLIENTE OBLIGATORIO ARRIBA
+        // 1. CLIENTE OBLIGATORIO
         OutlinedTextField(
             value = cliente,
             onValueChange = { viewModel.cliente = it },
@@ -51,92 +50,84 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color(0xFF5D4037),
-                unfocusedBorderColor = if (cliente.isEmpty()) Color.Red else Color(0xFFE5D8CA)
+                unfocusedBorderColor = if (cliente.isEmpty()) Color.Red else Color(0xFFE5D8CA),
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White
             )
         )
 
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                label = { Text("Buscar producto...") },
+        // 2. BOTONES DE ACCIÓN (Buscar y Venta Rápida)
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = { 
+                    if (cliente.isBlank()) showAlertaCliente = true 
+                    else showSearchDialog = true 
+                },
                 modifier = Modifier.weight(1f),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF5D4037),
-                    unfocusedBorderColor = Color(0xFFE5D8CA)
-                )
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = { 
-                if (cliente.isBlank()) showAlertaCliente = true 
-                else showRapidaDialog = true 
-            }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF795548))) { Text("Rápida") }
-        }
-        
-        LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp)) {
-            items(productosFiltrados) { producto ->
-                val enCarrito = carrito[producto] ?: 0
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            if (cliente.isBlank()) {
-                                showAlertaCliente = true
-                            } else if (producto.stock > enCarrito) {
-                                carrito[producto] = enCarrito + 1
-                            }
-                        }
-                        .padding(vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(producto.nombre, fontWeight = FontWeight.Bold)
-                        Text(formatCOP(producto.precio), style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Text("Stock: ${producto.stock}", style = MaterialTheme.typography.bodySmall)
-                }
-                Divider(color = Color(0xFFE5D8CA))
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5D4037))
+            ) {
+                Icon(Icons.Filled.Search, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Agregar Producto")
+            }
+            Button(
+                onClick = { 
+                    if (cliente.isBlank()) showAlertaCliente = true 
+                    else showRapidaDialog = true 
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF795548))
+            ) {
+                Text("Rápida")
             }
         }
 
-        if (carrito.isNotEmpty()) {
-            Surface(shadowElevation = 8.dp, color = Color(0xFFF7F3ED), modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Carrito de Venta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    carrito.entries.toList().forEach { (producto, cantidad) ->
+        // 3. CARRITO (Ocupa el resto de la pantalla)
+        if (carrito.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("El carrito está vacío.\nBusca un producto para empezar.", textAlign = TextAlign.Center, color = Color.Gray)
+            }
+        } else {
+            LazyColumn(modifier = Modifier.weight(1f).padding(16.dp)) {
+                items(carrito.entries.toList()) { (producto, cantidad) ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White)
+                    ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(producto.nombre, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                            IconButton(onClick = {
-                                if (cantidad > 1) carrito[producto] = cantidad - 1 else itemAEliminar = producto
-                            }, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Filled.Remove, contentDescription = "Menos", modifier = Modifier.size(20.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(producto.nombre, fontWeight = FontWeight.Bold, color = Color(0xFF30231F))
+                                Text(formatCOP(producto.precio), style = MaterialTheme.typography.bodySmall)
                             }
-                            Text("$cantidad", modifier = Modifier.padding(horizontal = 8.dp), fontWeight = FontWeight.Bold)
-                            IconButton(onClick = {
-                                if (producto.stock > cantidad) carrito[producto] = cantidad + 1
-                            }, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Filled.Add, contentDescription = "Más", modifier = Modifier.size(20.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = {
+                                    if (cantidad > 1) carrito[producto] = cantidad - 1 else itemAEliminar = producto
+                                }, modifier = Modifier.size(32.dp)) {
+                                    Icon(Icons.Filled.Remove, contentDescription = "Menos", modifier = Modifier.size(20.dp))
+                                }
+                                Text("$cantidad", modifier = Modifier.padding(horizontal = 8.dp), fontWeight = FontWeight.Bold)
+                                IconButton(onClick = {
+                                    if (producto.stock > cantidad) carrito[producto] = cantidad + 1
+                                }, modifier = Modifier.size(32.dp)) {
+                                    Icon(Icons.Filled.Add, contentDescription = "Más", modifier = Modifier.size(20.dp))
+                                }
                             }
-                            Text(formatCOP(producto.precio * cantidad), modifier = Modifier.width(80.dp), textAlign = TextAlign.End, fontWeight = FontWeight.Bold)
-                            IconButton(onClick = { itemAEliminar = producto }, modifier = Modifier.size(32.dp)) {
-                                Icon(Icons.Filled.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
-                            }
+                            Text(formatCOP(producto.precio * cantidad), modifier = Modifier.width(80.dp), textAlign = TextAlign.End, fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
                         }
                     }
-                    
-                    Divider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFE5D8CA))
+                }
+            }
+
+            // 4. TOTAL Y COBRAR
+            Surface(shadowElevation = 8.dp, color = Color.White, modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     val total = carrito.entries.sumOf { it.key.precio * it.value }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("Total:", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text(formatCOP(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(formatCOP(total), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
                     }
                     Button(
                         onClick = { showPagoDialog = true },
@@ -148,12 +139,61 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
         }
     }
 
+    // --- DIÁLOGO DE BÚSQUEDA (Para no mostrar todo el inventario de fondo) ---
+    if (showSearchDialog) {
+        var searchQuery by remember { mutableStateOf("") }
+        val filtrados = productos.filter { it.nombre.contains(searchQuery, ignoreCase = true) }
+
+        AlertDialog(
+            onDismissRequest = { showSearchDialog = false },
+            containerColor = Color.White,
+            title = { Text("Buscar Producto") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        label = { Text("Escribir nombre...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                        items(filtrados) { prod ->
+                            val enCarrito = carrito[prod] ?: 0
+                            Row(
+                                modifier = Modifier.fillMaxWidth()
+                                    .clickable {
+                                        if (prod.stock > enCarrito) carrito[prod] = enCarrito + 1
+                                    }
+                                    .padding(vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(prod.nombre, fontWeight = FontWeight.Bold)
+                                    Text("Stock: ${prod.stock}", style = MaterialTheme.typography.bodySmall)
+                                }
+                                Text(formatCOP(prod.precio), fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
+                            }
+                            Divider(color = Color(0xFFE5D8CA))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSearchDialog = false }) { Text("Listo", color = Color(0xFF5D4037), fontWeight = FontWeight.Bold) }
+            }
+        )
+    }
+
+    // --- RESTO DE DIÁLOGOS (Forzados a color blanco) ---
     if (showAlertaCliente) {
         AlertDialog(
             onDismissRequest = { showAlertaCliente = false },
+            containerColor = Color.White,
             title = { Text("Cliente Requerido") },
             text = { Text("Por favor, ingrese el nombre del cliente antes de agregar productos.") },
-            confirmButton = { TextButton(onClick = { showAlertaCliente = false }) { Text("Entendido") } }
+            confirmButton = { TextButton(onClick = { showAlertaCliente = false }) { Text("Entendido", color = Color(0xFF5D4037)) } }
         )
     }
 
@@ -163,20 +203,21 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
 
         AlertDialog(
             onDismissRequest = { showPagoDialog = false },
+            containerColor = Color.White,
             title = { Text("Método de Pago") },
             text = {
                 Column {
-                    Text("Total a cobrar: ${formatCOP(total)}", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
+                    Text("Total: ${formatCOP(total)}", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = metodo == "Efectivo", onClick = { metodo = "Efectivo" })
+                        RadioButton(selected = metodo == "Efectivo", onClick = { metodo = "Efectivo" }, colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF5D4037)))
                         Text("Efectivo")
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = metodo == "Nequi", onClick = { metodo = "Nequi" })
+                        RadioButton(selected = metodo == "Nequi", onClick = { metodo = "Nequi" }, colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF5D4037)))
                         Text("Nequi")
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = metodo == "Fiado", onClick = { metodo = "Fiado" })
+                        RadioButton(selected = metodo == "Fiado", onClick = { metodo = "Fiado" }, colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF5D4037)))
                         Text("Fiado (Pendiente)")
                     }
                 }
@@ -184,24 +225,24 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
             confirmButton = {
                 Button(onClick = {
                     showPagoDialog = false
-                    val esFiado = metodo == "Fiado"
-                    viewModel.procesarVenta(metodo, esFiado) { ventaGuardada ->
+                    viewModel.procesarVenta(metodo, metodo == "Fiado") { ventaGuardada ->
                         ventaParaRecibo = ventaGuardada
                         showExitoDialog = true
                     }
-                }) { Text("Confirmar") }
+                }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5D4037))) { Text("Confirmar") }
             },
-            dismissButton = { TextButton(onClick = { showPagoDialog = false }) { Text("Cancelar") } }
+            dismissButton = { TextButton(onClick = { showPagoDialog = false }) { Text("Cancelar", color = Color.Gray) } }
         )
     }
 
     if (itemAEliminar != null) {
         AlertDialog(
             onDismissRequest = { itemAEliminar = null },
+            containerColor = Color.White,
             title = { Text("Quitar del carrito") },
-            text = { Text("¿Estás seguro de quitar ${itemAEliminar!!.nombre} de la venta?") },
+            text = { Text("¿Quitar ${itemAEliminar!!.nombre}?") },
             confirmButton = { TextButton(onClick = { carrito.remove(itemAEliminar); itemAEliminar = null }) { Text("Quitar", color = Color.Red) } },
-            dismissButton = { TextButton(onClick = { itemAEliminar = null }) { Text("Cancelar") } }
+            dismissButton = { TextButton(onClick = { itemAEliminar = null }) { Text("Cancelar", color = Color.Gray) } }
         )
     }
 
@@ -210,7 +251,8 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
         var monto by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showRapidaDialog = false },
-            title = { Text("Venta Rápida (Monto Manual)") },
+            containerColor = Color.White,
+            title = { Text("Venta Rápida") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = concepto, onValueChange = { concepto = it }, label = { Text("Concepto") }, modifier = Modifier.fillMaxWidth())
@@ -225,25 +267,26 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                         carrito[tempProduct] = 1
                         showRapidaDialog = false
                     }
-                }) { Text("Agregar") }
+                }) { Text("Agregar", color = Color(0xFF5D4037)) }
             },
-            dismissButton = { TextButton(onClick = { showRapidaDialog = false }) { Text("Cancelar") } }
+            dismissButton = { TextButton(onClick = { showRapidaDialog = false }) { Text("Cancelar", color = Color.Gray) } }
         )
     }
 
     if (showExitoDialog && ventaParaRecibo != null) {
         AlertDialog(
             onDismissRequest = { showExitoDialog = false },
+            containerColor = Color.White,
             title = { Text("¡Venta Exitosa!") },
-            text = { Text("Se ha registrado un cobro por ${formatCOP(ventaParaRecibo!!.total)}.\nEl stock ha sido actualizado.") },
+            text = { Text("Total: ${formatCOP(ventaParaRecibo!!.total)}") },
             confirmButton = {
                 Button(onClick = { 
                     showExitoDialog = false
                     val bitmap = generarReciboBitmap(context, ventaParaRecibo!!)
                     compartirRecibo(context, bitmap, ventaParaRecibo!!.id)
-                }) { Text("Compartir Recibo") }
+                }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5D4037))) { Text("Compartir Recibo") }
             },
-            dismissButton = { TextButton(onClick = { showExitoDialog = false }) { Text("Cerrar") } }
+            dismissButton = { TextButton(onClick = { showExitoDialog = false }) { Text("Cerrar", color = Color.Gray) } }
         )
     }
 }

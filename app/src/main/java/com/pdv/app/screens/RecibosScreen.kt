@@ -64,6 +64,7 @@ fun RecibosScreen(viewModel: HistorialViewModel = viewModel()) {
     if (ventaParaPrevisualizar != null) {
         val bitmap = remember(ventaParaPrevisualizar) { generarReciboBitmap(context, ventaParaPrevisualizar!!) }
         AlertDialog(
+            containerColor = Color.White,
             onDismissRequest = { ventaParaPrevisualizar = null },
             title = { Text("Vista Previa del Recibo") },
             text = {

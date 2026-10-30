@@ -66,7 +66,7 @@ fun HistorialScreen(viewModel: HistorialViewModel = viewModel(), ventaViewModel:
             }
         }
 
-        TabRow(selectedTabIndex = tabSeleccionada, containerColor = Color(0xFFF7F3ED)) {
+        TabRow(selectedTabIndex = tabSeleccionada, containerColor = Color(0xFFF7F3ED), contentColor = Color(0xFF5D4037)) {
             Tab(selected = tabSeleccionada == 0, onClick = { tabSeleccionada = 0 }, text = { Text("Todas") })
             Tab(selected = tabSeleccionada == 1, onClick = { tabSeleccionada = 1 }, text = { Text("Fiados Pendientes") })
         }
