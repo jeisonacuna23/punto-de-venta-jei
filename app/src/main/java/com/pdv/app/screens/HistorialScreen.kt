@@ -49,7 +49,7 @@ fun VentaItem(venta: Venta) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Venta #${venta.id}", fontWeight = FontWeight.Bold)
+                Text("Venta #${venta.id}${if (venta.cliente.isNotBlank()) " - ${venta.cliente}" else ""}", fontWeight = FontWeight.Bold)
                 Text(fechaStr, style = MaterialTheme.typography.bodySmall)
             }
             Spacer(modifier = Modifier.height(4.dp))

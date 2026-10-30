@@ -8,5 +8,6 @@ data class Venta(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val fecha: Long = System.currentTimeMillis(),
     val total: Double,
-    val detalles: String // Ej: "2x Gaseosa, 1x Pan"
+    val detalles: String,
+    val cliente: String = ""
 )

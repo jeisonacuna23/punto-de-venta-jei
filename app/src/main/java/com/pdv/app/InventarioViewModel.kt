@@ -24,9 +24,21 @@ class InventarioViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    fun actualizarProducto(producto: Product) {
+        viewModelScope.launch {
+            dao.updateProduct(producto)
+        }
+    }
+
     fun eliminarProducto(producto: Product) {
         viewModelScope.launch {
             dao.deleteProduct(producto)
+        }
+    }
+
+    fun importarProductos(productos: List<Product>) {
+        viewModelScope.launch {
+            dao.insertAllProducts(productos)
         }
     }
 }

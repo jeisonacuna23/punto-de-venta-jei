@@ -43,6 +43,7 @@ fun RecibosScreen(viewModel: HistorialViewModel = viewModel()) {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Venta #${venta.id} - ${formatCOP(venta.total)}", style = MaterialTheme.typography.titleMedium)
+                            if (venta.cliente.isNotBlank()) Text("Cliente: ${venta.cliente}", style = MaterialTheme.typography.bodySmall)
                             val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
                             Text(dateFormat.format(Date(venta.fecha)), style = MaterialTheme.typography.bodySmall)
                         }

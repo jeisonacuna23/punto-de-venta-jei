@@ -28,15 +28,33 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
     val productos by viewModel.productos.collectAsState()
     val carrito = remember { mutableStateMapOf<Product, Int>() }
     
+    var cliente by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
+    var showRapidaDialog by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
     var ventaParaRecibo by remember { mutableStateOf<Venta?>(null) }
     val context = LocalContext.current
 
+    val productosFiltrados = productos.filter { it.nombre.contains(searchQuery, ignoreCase = true) }
+
     Column(modifier = Modifier.fillMaxSize()) {
-        Text("Toca para agregar al carrito", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+        // Barra de búsqueda y botón de venta rápida
+        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Buscar producto...") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(onClick = { showRapidaDialog = true }, contentPadding = PaddingValues(horizontal = 12.dp)) {
+                Text("Rápida")
+            }
+        }
         
         LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 16.dp)) {
-            items(productos) { producto ->
+            items(productosFiltrados) { producto ->
                 val enCarrito = carrito[producto] ?: 0
                 Row(
                     modifier = Modifier
@@ -101,6 +119,14 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                     }
                     
                     Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    OutlinedTextField(
+                        value = cliente,
+                        onValueChange = { cliente = it },
+                        label = { Text("Nombre del Cliente (Opcional)") },
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        singleLine = true
+                    )
                     
                     val total = carrito.entries.sumOf { it.key.precio * it.value }
                     Row(
@@ -115,18 +141,30 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                     Button(
                         onClick = {
                             val detallesStr = carrito.entries.joinToString(", ") { "${it.value}x ${it.key.nombre}" }
-                            ventaParaRecibo = Venta(total = total, detalles = detallesStr)
-                            viewModel.procesarVenta(carrito.toMap())
+                            ventaParaRecibo = Venta(total = total, detalles = detallesStr, cliente = cliente)
+                            viewModel.procesarVenta(carrito.toMap(), cliente)
                             carrito.clear()
+                            cliente = ""
                             showDialog = true
                         },
-                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                     ) {
                         Text("Cobrar y Generar Venta")
                     }
                 }
             }
         }
+    }
+
+    if (showRapidaDialog) {
+        VentaRapidaDialog(
+            onDismiss = { showRapidaDialog = false },
+            onSave = { concepto, monto ->
+                val tempProduct = Product(id = -System.currentTimeMillis().toInt(), nombre = concepto, precio = monto, stock = 1)
+                carrito[tempProduct] = 1
+                showRapidaDialog = false
+            }
+        )
     }
 
     if (showDialog && ventaParaRecibo != null) {
@@ -138,15 +176,35 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                 Button(onClick = {
                     showDialog = false
                     generarYCompartirRecibo(context, ventaParaRecibo!!)
-                }) {
-                    Text("Compartir Recibo")
-                }
+                }) { Text("Compartir Recibo") }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text("Cerrar")
-                }
+                TextButton(onClick = { showDialog = false }) { Text("Cerrar") }
             }
         )
     }
+}
+
+@Composable
+fun VentaRapidaDialog(onDismiss: () -> Unit, onSave: (String, Double) -> Unit) {
+    var concepto by remember { mutableStateOf("") }
+    var monto by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Venta Rápida (Monto Manual)") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = concepto, onValueChange = { concepto = it }, label = { Text("Concepto / Descripción") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = monto, onValueChange = { monto = it }, label = { Text("Monto $") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number))
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val m = monto.toDoubleOrNull() ?: 0.0
+                if (concepto.isNotBlank() && m > 0) onSave(concepto, m)
+            }) { Text("Agregar al Carrito") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
 }

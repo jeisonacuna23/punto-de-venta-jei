@@ -10,8 +10,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-data class CartItem(val product: Product, val quantity: Int)
-
 class VentaViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getDatabase(application)
     private val productDao = db.productDao()
@@ -23,20 +21,22 @@ class VentaViewModel(application: Application) : AndroidViewModel(application) {
         initialValue = emptyList()
     )
 
-    fun procesarVenta(carrito: Map<Product, Int>) {
+    fun procesarVenta(carrito: Map<Product, Int>, cliente: String) {
         if (carrito.isEmpty()) return
         
         viewModelScope.launch {
             val detallesStr = carrito.entries.joinToString(", ") { "${it.value}x ${it.key.nombre}" }
             val total = carrito.entries.sumOf { it.key.precio * it.value }
             
-            // 1. Guardar la venta
-            ventaDao.insertVenta(Venta(total = total, detalles = detallesStr))
+            ventaDao.insertVenta(Venta(total = total, detalles = detallesStr, cliente = cliente))
             
-            // 2. Descontar stock
             carrito.forEach { (producto, cantidad) ->
-                val nuevoStock = producto.stock - cantidad
-                productDao.updateProduct(producto.copy(stock = nuevoStock))
+                if (producto.id > 0) { // Solo si es un producto real (ignora venta rápida)
+                    val nuevoStock = producto.stock - cantidad
+                    if (nuevoStock >= 0) {
+                        productDao.updateProduct(producto.copy(stock = nuevoStock))
+                    }
+                }
             }
         }
     }

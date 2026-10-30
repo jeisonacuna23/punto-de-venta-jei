@@ -16,8 +16,7 @@ import java.util.Date
 import java.util.Locale
 
 fun generarYCompartirRecibo(context: Context, venta: Venta) {
-    // 1. Crear el Bitmap (lienzo en blanco de 600x800)
-    val bitmap = Bitmap.createBitmap(600, 800, Bitmap.Config.ARGB_8888)
+    val bitmap = Bitmap.createBitmap(600, 850, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
     canvas.drawColor(Color.WHITE)
 
@@ -27,7 +26,6 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
         isAntiAlias = true
     }
 
-    // 2. Dibujar el recibo
     var y = 60f
     val centerX = 300f
 
@@ -48,6 +46,11 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
     
     y += 30f
     canvas.drawText("Venta #: ${venta.id}", 40f, y, paint)
+    
+    if (venta.cliente.isNotBlank()) {
+        y += 30f
+        canvas.drawText("Cliente: ${venta.cliente}", 40f, y, paint)
+    }
 
     y += 30f
     canvas.drawText("----------------------------------------", 40f, y, paint)
@@ -57,10 +60,9 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
     
     y += 30f
     paint.textSize = 18f
-    // Si el texto es muy largo, lo partimos en varias líneas
     val palabras = venta.detalles.split(", ")
     for (palabra in palabras) {
-        if (y < 650f) {
+        if (y < 700f) {
             canvas.drawText("• $palabra", 60f, y, paint)
             y += 25f
         }
@@ -81,7 +83,6 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
     paint.isFakeBoldText = false
     canvas.drawText("¡Gracias por su compra!", centerX, y, paint)
 
-    // 3. Guardar la imagen en la caché
     val cachePath = File(context.cacheDir, "images")
     cachePath.mkdirs()
     val file = File(cachePath, "recibo_${venta.id}.png")
@@ -89,9 +90,7 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
     bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
     stream.close()
 
-    // 4. Compartir usando FileProvider
     val uri: Uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-    
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "image/png"
         putExtra(Intent.EXTRA_STREAM, uri)
