@@ -22,10 +22,8 @@ import kotlin.math.max
 
 fun generarYCompartirRecibo(context: Context, venta: Venta) {
     val items = venta.detalles.split(" | ")
-    
-    // Altura dinámica: Base de 500px + 35px por cada producto
-    val calculatedHeight = 500 + (items.size * 35)
-    val finalHeight = max(calculatedHeight, 600)
+    val calculatedHeight = 550 + (items.size * 35)
+    val finalHeight = max(calculatedHeight, 650)
     
     val bitmap = Bitmap.createBitmap(600, finalHeight, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
@@ -67,9 +65,10 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
     if (venta.cliente.isNotBlank()) {
         y += 30f
         canvas.drawText("Cliente: ${venta.cliente}", 40f, y, paint)
-        y += 30f
-        canvas.drawText("Pago: ${venta.metodoPago}", 40f, y, paint)
     }
+
+    y += 30f
+    canvas.drawText("Pago: ${venta.metodoPago}", 40f, y, paint)
 
     y += 30f
     canvas.drawText("----------------------------------------", 40f, y, paint)
@@ -90,11 +89,20 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
     paint.textSize = 30f
     canvas.drawText("TOTAL: ${formatCOP(venta.total)}", 40f, y, paint)
 
-    y += 60f
+    y += 50f
     paint.textAlign = Paint.Align.CENTER
+    paint.textSize = 22f
+    
+    if (!venta.pagado) {
+        paint.color = Color.RED
+        paint.isFakeBoldText = true
+        canvas.drawText("*** FIADO - PENDIENTE ***", centerX, y, paint)
+        paint.color = Color.BLACK
+        y += 35f
+    }
+
     paint.textSize = 18f
     paint.isFakeBoldText = false
-    if (!venta.pagado) { paint.color = Color.RED; paint.isFakeBoldText = true; canvas.drawText("*** FIADO - PENDIENTE ***", centerX, y, paint); paint.color = Color.BLACK; y += 30f; paint.isFakeBoldText = false }
     canvas.drawText("¡Gracias por su compra!", centerX, y, paint)
 
     val cachePath = File(context.cacheDir, "images")

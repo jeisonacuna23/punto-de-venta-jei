@@ -48,8 +48,9 @@ class VentaViewModel(application: Application) : AndroidViewModel(application) {
                 pagado = !esFiado
             )
             
-            val id = ventaDao.insertVenta(nuevaVenta)
-            val ventaGuardada = nuevaVenta.copy(id = id.toInt())
+            // Ahora insertVenta retorna un Long (el ID)
+            val idGenerado = ventaDao.insertVenta(nuevaVenta)
+            val ventaGuardada = nuevaVenta.copy(id = idGenerado.toInt())
             
             carritoCopia.forEach { (producto, cantidad) ->
                 if (producto.id > 0) {

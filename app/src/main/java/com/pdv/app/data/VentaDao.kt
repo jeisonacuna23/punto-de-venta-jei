@@ -9,7 +9,7 @@ interface VentaDao {
     fun getAllVentas(): Flow<List<Venta>>
 
     @Insert
-    suspend fun insertVenta(venta: Venta)
+    suspend fun insertVenta(venta: Venta): Long
 
     @Update
     suspend fun updateVenta(venta: Venta)
