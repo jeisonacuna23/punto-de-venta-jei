@@ -19,11 +19,14 @@ android {
 
     signingConfigs {
         create("release") {
-            // Lee las variables de entorno que configuramos en GitHub Actions
-            storeFile = System.getenv("KEYSTORE_FILE")?.let { file(it) }
-            storePassword = System.getenv("KEYSTORE_PASSWORD")
-            keyAlias = System.getenv("KEY_ALIAS")
-            keyPassword = System.getenv("KEY_PASSWORD")
+            // Lee las variables de entorno de GitHub Actions
+            val keystorePath = System.getenv("KEYSTORE_FILE")
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
         }
     }
 
@@ -31,12 +34,6 @@ android {
         release {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("release")
-            // Renombra el APK final para que sea fácil de encontrar
-            applicationVariants.all {
-                outputs.all {
-                    (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = "PuntoDeVenta-v${versionName}.apk"
-                }
-            }
         }
     }
     compileOptions {
@@ -61,11 +58,8 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
-    // Room Database
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
-
-    // ViewModel Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 }
