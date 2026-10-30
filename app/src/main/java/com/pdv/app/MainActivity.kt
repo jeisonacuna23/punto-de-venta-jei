@@ -1,5 +1,6 @@
 package com.pdv.app
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -24,17 +25,28 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PdvTheme {
-                MainScreen()
+                AppNavigation()
             }
         }
     }
 }
 
+@Composable
+fun AppNavigation() {
+    var isLoggedIn by remember { mutableStateOf(false) }
+
+    if (!isLoggedIn) {
+        LoginScreen(onLoginSuccess = { isLoggedIn = true })
+    } else {
+        MainScreen(onLogout = { isLoggedIn = false })
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(onLogout: () -> Unit) {
     var selectedItem by remember { mutableStateOf(0) }
-    var showBackupMenu by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val inventarioViewModel: InventarioViewModel = viewModel()
     val historialViewModel: HistorialViewModel = viewModel()
@@ -47,24 +59,13 @@ fun MainScreen() {
     )
 
     val exportProductsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
-        uri?.let {
-            exportarProductosCSV(context, it, inventarioViewModel.productos.value)
-            Toast.makeText(context, "Productos exportados", Toast.LENGTH_SHORT).show()
-        }
+        uri?.let { exportarProductosCSV(context, it, inventarioViewModel.productos.value); Toast.makeText(context, "Productos exportados", Toast.LENGTH_SHORT).show() }
     }
     val exportSalesLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
-        uri?.let {
-            exportarVentasCSV(context, it, historialViewModel.ventas.value)
-            Toast.makeText(context, "Ventas exportadas", Toast.LENGTH_SHORT).show()
-        }
+        uri?.let { exportarVentasCSV(context, it, historialViewModel.ventas.value); Toast.makeText(context, "Ventas exportadas", Toast.LENGTH_SHORT).show() }
     }
     val importProductsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let {
-            importarProductosCSV(context, it) { productos ->
-                inventarioViewModel.importarProductos(productos)
-                Toast.makeText(context, "${productos.size} productos importados", Toast.LENGTH_SHORT).show()
-            }
-        }
+        uri?.let { importarProductosCSV(context, it) { prod -> inventarioViewModel.importarProductos(prod); Toast.makeText(context, "${prod.size} productos importados", Toast.LENGTH_SHORT).show() } }
     }
 
     Scaffold(
@@ -73,13 +74,18 @@ fun MainScreen() {
                 title = { Text(items[selectedItem].first, color = Color.White) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF30231F)),
                 actions = {
-                    IconButton(onClick = { showBackupMenu = true }) {
+                    IconButton(onClick = { showMenu = true }) {
                         Icon(Icons.Filled.MoreVert, contentDescription = "Opciones", tint = Color.White)
                     }
-                    DropdownMenu(expanded = showBackupMenu, onDismissRequest = { showBackupMenu = false }) {
-                        DropdownMenuItem(text = { Text("Exportar Inventario (CSV)") }, onClick = { exportProductsLauncher.launch("inventario.csv"); showBackupMenu = false })
-                        DropdownMenuItem(text = { Text("Exportar Ventas (CSV)") }, onClick = { exportSalesLauncher.launch("ventas.csv"); showBackupMenu = false })
-                        DropdownMenuItem(text = { Text("Importar Inventario (CSV)") }, onClick = { importProductsLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "application/csv")); showBackupMenu = false })
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(text = { Text("Exportar Inventario (CSV)") }, onClick = { exportProductsLauncher.launch("inventario.csv"); showMenu = false })
+                        DropdownMenuItem(text = { Text("Exportar Ventas (CSV)") }, onClick = { exportSalesLauncher.launch("ventas.csv"); showMenu = false })
+                        DropdownMenuItem(text = { Text("Importar Inventario (CSV)") }, onClick = { importProductsLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "application/csv")); showMenu = false })
+                        HorizontalDivider()
+                        DropdownMenuItem(text = { Text("Cerrar Sesión", color = Color.Red) }, onClick = { 
+                            showMenu = false
+                            onLogout() 
+                        })
                     }
                 }
             )
@@ -95,7 +101,7 @@ fun MainScreen() {
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = Color.White,
                             selectedTextColor = Color(0xFF30231F),
-                            indicatorColor = Color(0xFF5D4037), // Marrón chocolate
+                            indicatorColor = Color(0xFF5D4037),
                             unselectedIconColor = Color(0xFF795548),
                             unselectedTextColor = Color(0xFF30231F)
                         )

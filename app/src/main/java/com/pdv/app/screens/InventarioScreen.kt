@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -34,7 +35,7 @@ fun InventarioScreen(viewModel: InventarioViewModel = viewModel()) {
             FloatingActionButton(onClick = { 
                 productoEditando = null
                 showDialog = true 
-            }) {
+            }, containerColor = Color(0xFF5D4037), contentColor = Color.White) {
                 Icon(Icons.Filled.Add, contentDescription = "Agregar Producto")
             }
         }
@@ -45,7 +46,11 @@ fun InventarioScreen(viewModel: InventarioViewModel = viewModel()) {
                 onValueChange = { searchQuery = it },
                 label = { Text("Buscar producto...") },
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
-                singleLine = true
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF5D4037),
+                    unfocusedBorderColor = Color(0xFFE5D8CA)
+                )
             )
 
             if (productosFiltrados.isEmpty()) {
@@ -82,7 +87,7 @@ fun InventarioScreen(viewModel: InventarioViewModel = viewModel()) {
                 TextButton(onClick = {
                     viewModel.eliminarProducto(productoAEliminar!!)
                     productoAEliminar = null
-                }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+                }) { Text("Eliminar", color = Color.Red) }
             },
             dismissButton = { TextButton(onClick = { productoAEliminar = null }) { Text("Cancelar") } }
         )
@@ -106,21 +111,25 @@ fun InventarioScreen(viewModel: InventarioViewModel = viewModel()) {
 
 @Composable
 fun ProductoItem(producto: Product, onEdit: () -> Unit, onDelete: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    // AQUÍ ESTABA EL ERROR: Forzamos el color de la tarjeta a Blanco puro (0xFFFFFFFF)
+    Card(
+        modifier = Modifier.fillMaxWidth(), 
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF))
+    ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(producto.nombre, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                Text("Precio: ${formatCOP(producto.precio)}", style = MaterialTheme.typography.bodyMedium)
-                Text("Stock: ${producto.stock} unidades", style = MaterialTheme.typography.bodySmall)
+                Text(producto.nombre, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = Color(0xFF30231F))
+                Text("Precio: ${formatCOP(producto.precio)}", style = MaterialTheme.typography.bodyMedium, color = Color(0xFF30231F))
+                Text("Stock: ${producto.stock} unidades", style = MaterialTheme.typography.bodySmall, color = Color(0xFF795548))
             }
             IconButton(onClick = onEdit) {
-                Icon(Icons.Filled.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Filled.Edit, contentDescription = "Editar", tint = Color(0xFF5D4037))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Filled.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error)
+                Icon(Icons.Filled.Delete, contentDescription = "Eliminar", tint = Color.Red)
             }
         }
     }
@@ -147,8 +156,8 @@ fun ProductDialog(producto: Product?, onDismiss: () -> Unit, onSave: (String, Do
                 val p = precio.toDoubleOrNull() ?: 0.0
                 val s = stock.toIntOrNull() ?: 0
                 if (nombre.isNotBlank()) onSave(nombre, p, s)
-            }) { Text("Guardar") }
+            }) { Text("Guardar", color = Color(0xFF5D4037)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = Color.Gray) } }
     )
 }
