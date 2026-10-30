@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -19,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pdv.app.VentaViewModel
 import com.pdv.app.data.Product
-import com.pdv.app.data.Venta
 import com.pdv.app.utils.formatCOP
 import com.pdv.app.utils.generarYCompartirRecibo
 
@@ -27,15 +27,14 @@ import com.pdv.app.utils.generarYCompartirRecibo
 fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
     val productos by viewModel.productos.collectAsState()
     val carrito = viewModel.carrito
-    var cliente by remember { mutableStateOf(viewModel.cliente) } // Sincrónico con ViewModel
+    var cliente by remember { mutableStateOf(viewModel.cliente) }
     cliente = viewModel.cliente 
     
     var searchQuery by remember { mutableStateOf("") }
     var showRapidaDialog by remember { mutableStateOf(false) }
-    var showDialog by remember { mutableStateOf(false) }
-    var ventaParaRecibo by remember { mutableStateOf<Venta?>(null) }
-    
-    // Para confirmar eliminación del carrito
+    var showPagoDialog by remember { mutableStateOf(false) }
+    var showExitoDialog by remember { mutableStateOf(false) }
+    var ventaParaRecibo by remember { mutableStateOf<com.pdv.app.data.Venta?>(null) }
     var itemAEliminar by remember { mutableStateOf<Product?>(null) }
     
     val context = LocalContext.current
@@ -48,12 +47,14 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                 onValueChange = { searchQuery = it },
                 label = { Text("Buscar producto...") },
                 modifier = Modifier.weight(1f),
-                singleLine = true
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF5D4037),
+                    unfocusedBorderColor = Color(0xFFE5D8CA)
+                )
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = { showRapidaDialog = true }, contentPadding = PaddingValues(horizontal = 12.dp)) {
-                Text("Rápida")
-            }
+            Button(onClick = { showRapidaDialog = true }) { Text("Rápida") }
         }
         
         LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 16.dp)) {
@@ -63,9 +64,7 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            if (producto.stock > enCarrito) {
-                                carrito[producto] = enCarrito + 1
-                            }
+                            if (producto.stock > enCarrito) carrito[producto] = enCarrito + 1
                         }
                         .padding(vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -77,14 +76,14 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                     }
                     Text("Stock: ${producto.stock}", style = MaterialTheme.typography.bodySmall)
                 }
-                Divider()
+                Divider(color = Color(0xFFE5D8CA))
             }
         }
 
         if (carrito.isNotEmpty()) {
             Surface(
                 shadowElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = Color(0xFFF7F3ED),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -98,37 +97,36 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(producto.nombre, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                            
                             IconButton(onClick = {
                                 if (cantidad > 1) carrito[producto] = cantidad - 1 else itemAEliminar = producto
                             }, modifier = Modifier.size(32.dp)) {
                                 Icon(Icons.Filled.Remove, contentDescription = "Menos", modifier = Modifier.size(20.dp))
                             }
-                            
                             Text("$cantidad", modifier = Modifier.padding(horizontal = 8.dp), fontWeight = FontWeight.Bold)
-                            
                             IconButton(onClick = {
                                 if (producto.stock > cantidad) carrito[producto] = cantidad + 1
                             }, modifier = Modifier.size(32.dp)) {
                                 Icon(Icons.Filled.Add, contentDescription = "Más", modifier = Modifier.size(20.dp))
                             }
-                            
                             Text(formatCOP(producto.precio * cantidad), modifier = Modifier.width(80.dp), textAlign = TextAlign.End, fontWeight = FontWeight.Bold)
-                            
                             IconButton(onClick = { itemAEliminar = producto }, modifier = Modifier.size(32.dp)) {
                                 Icon(Icons.Filled.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                             }
                         }
                     }
                     
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    Divider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFE5D8CA))
 
                     OutlinedTextField(
                         value = cliente,
                         onValueChange = { viewModel.cliente = it },
                         label = { Text("Nombre del Cliente (Opcional)") },
                         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        singleLine = true
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF5D4037),
+                            unfocusedBorderColor = Color(0xFFE5D8CA)
+                        )
                     )
                     
                     val total = carrito.entries.sumOf { it.key.precio * it.value }
@@ -142,22 +140,52 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                     }
                     
                     Button(
-                        onClick = {
-                            val detallesStr = carrito.entries.joinToString(", ") { "${it.value}x ${it.key.nombre}" }
-                            // Se predice el próximo ID para el recibo visual, aunque Room asigne el real
-                            // (Para la vista previa antes de guardar, usamos 0 o el tamaño de ventas + 1, pero lo ideal es guardar y luego compartir)
-                            // Simplificación: Mostramos el recibo temporal con el ID que retornará Room (no podemos saberlo exacto antes de guardar, así que el recibo visual usará un ID falso hasta que se guarde)
-                            ventaParaRecibo = Venta(id = 0, total = total, detalles = detallesStr, cliente = cliente) 
-                            viewModel.procesarVenta()
-                            showDialog = true
-                        },
+                        onClick = { showPagoDialog = true },
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                     ) {
-                        Text("Cobrar y Generar Venta")
+                        Text("Cobrar")
                     }
                 }
             }
         }
+    }
+
+    if (showPagoDialog) {
+        var metodo by remember { mutableStateOf("Efectivo") }
+        val total = carrito.entries.sumOf { it.key.precio * it.value }
+
+        AlertDialog(
+            onDismissRequest = { showPagoDialog = false },
+            title = { Text("Método de Pago") },
+            text = {
+                Column {
+                    Text("Total a cobrar: ${formatCOP(total)}", fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = metodo == "Efectivo", onClick = { metodo = "Efectivo" })
+                        Text("Efectivo")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = metodo == "Nequi", onClick = { metodo = "Nequi" })
+                        Text("Nequi")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = metodo == "Fiado", onClick = { metodo = "Fiado" })
+                        Text("Fiado (Queda debiendo)")
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    showPagoDialog = false
+                    val esFiado = metodo == "Fiado"
+                    viewModel.procesarVenta(metodo, esFiado) { ventaGuardada ->
+                        ventaParaRecibo = ventaGuardada
+                        showExitoDialog = true
+                    }
+                }) { Text("Confirmar") }
+            },
+            dismissButton = { TextButton(onClick = { showPagoDialog = false }) { Text("Cancelar") } }
+        )
     }
 
     if (itemAEliminar != null) {
@@ -165,67 +193,51 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
             onDismissRequest = { itemAEliminar = null },
             title = { Text("Quitar del carrito") },
             text = { Text("¿Estás seguro de quitar ${itemAEliminar!!.nombre} de la venta?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    carrito.remove(itemAEliminar)
-                    itemAEliminar = null
-                }) { Text("Quitar", color = MaterialTheme.colorScheme.error) }
-            },
+            confirmButton = { TextButton(onClick = { carrito.remove(itemAEliminar); itemAEliminar = null }) { Text("Quitar", color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { itemAEliminar = null }) { Text("Cancelar") } }
         )
     }
 
     if (showRapidaDialog) {
-        VentaRapidaDialog(
-            onDismiss = { showRapidaDialog = false },
-            onSave = { concepto, monto ->
-                val tempProduct = Product(id = -System.currentTimeMillis().toInt(), nombre = concepto, precio = monto, stock = 1)
-                carrito[tempProduct] = 1
-                showRapidaDialog = false
-            }
+        var concepto by remember { mutableStateOf("") }
+        var monto by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showRapidaDialog = false },
+            title = { Text("Venta Rápida (Monto Manual)") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = concepto, onValueChange = { concepto = it }, label = { Text("Concepto") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = monto, onValueChange = { monto = it }, label = { Text("Monto $") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val m = monto.toDoubleOrNull() ?: 0.0
+                    if (concepto.isNotBlank() && m > 0) {
+                        val tempProduct = Product(id = -System.currentTimeMillis().toInt(), nombre = concepto, precio = m, stock = 1)
+                        carrito[tempProduct] = 1
+                        showRapidaDialog = false
+                    }
+                }) { Text("Agregar") }
+            },
+            dismissButton = { TextButton(onClick = { showRapidaDialog = false }) { Text("Cancelar") } }
         )
     }
 
-    if (showDialog && ventaParaRecibo != null) {
+    if (showExitoDialog && ventaParaRecibo != null) {
         AlertDialog(
-            onDismissRequest = { showDialog = false },
+            onDismissRequest = { showExitoDialog = false },
             title = { Text("¡Venta Exitosa!") },
             text = { Text("Se ha registrado un cobro por ${formatCOP(ventaParaRecibo!!.total)}.\nEl stock ha sido actualizado.") },
             confirmButton = {
                 Button(onClick = {
-                    showDialog = false
-                    // Como el ID real lo asigna la BD, generamos el recibo con el objeto que ya se envió (el ID se sincronizará en el historial, pero para este recibo inmediato usaremos el temporal)
-                    // NOTA: Para que el recibo salga con el VSJA correcto, deberíamos consultar la última venta, pero para simplificar, le pasamos el objeto.
+                    showExitoDialog = false
                     generarYCompartirRecibo(context, ventaParaRecibo!!)
                 }) { Text("Compartir Recibo") }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Cerrar") }
+                TextButton(onClick = { showExitoDialog = false }) { Text("Cerrar") }
             }
         )
     }
-}
-
-@Composable
-fun VentaRapidaDialog(onDismiss: () -> Unit, onSave: (String, Double) -> Unit) {
-    var concepto by remember { mutableStateOf("") }
-    var monto by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Venta Rápida (Monto Manual)") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = concepto, onValueChange = { concepto = it }, label = { Text("Concepto / Descripción") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = monto, onValueChange = { monto = it }, label = { Text("Monto $") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number))
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                val m = monto.toDoubleOrNull() ?: 0.0
-                if (concepto.isNotBlank() && m > 0) onSave(concepto, m)
-            }) { Text("Agregar al Carrito") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
-    )
 }

@@ -11,6 +11,9 @@ interface VentaDao {
     @Insert
     suspend fun insertVenta(venta: Venta)
 
+    @Update
+    suspend fun updateVenta(venta: Venta)
+
     @Delete
     suspend fun deleteVenta(venta: Venta)
 }

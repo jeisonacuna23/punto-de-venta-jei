@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -37,16 +38,12 @@ fun RecibosScreen(viewModel: HistorialViewModel = viewModel()) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(ventas) { venta ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF))) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text("VSJA-${String.format("%04d", venta.id)} - ${formatCOP(venta.total)}", style = MaterialTheme.typography.titleMedium)
-                            if (venta.cliente.isNotBlank()) {
-                                Text("Cliente: ${venta.cliente}", style = MaterialTheme.typography.bodySmall)
-                            }
+                            if (venta.cliente.isNotBlank()) Text("Cliente: ${venta.cliente}", style = MaterialTheme.typography.bodySmall)
+                            if (!venta.pagado) Text("ESTADO: FIADO", color = Color.Red, style = MaterialTheme.typography.bodySmall)
                             val dateFormat = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.getDefault())
                             dateFormat.timeZone = TimeZone.getTimeZone("America/Caracas")
                             Text(dateFormat.format(Date(venta.fecha)), style = MaterialTheme.typography.bodySmall)

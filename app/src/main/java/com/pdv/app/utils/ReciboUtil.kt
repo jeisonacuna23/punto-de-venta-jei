@@ -67,6 +67,8 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
     if (venta.cliente.isNotBlank()) {
         y += 30f
         canvas.drawText("Cliente: ${venta.cliente}", 40f, y, paint)
+        y += 30f
+        canvas.drawText("Pago: ${venta.metodoPago}", 40f, y, paint)
     }
 
     y += 30f
@@ -92,6 +94,7 @@ fun generarYCompartirRecibo(context: Context, venta: Venta) {
     paint.textAlign = Paint.Align.CENTER
     paint.textSize = 18f
     paint.isFakeBoldText = false
+    if (!venta.pagado) { paint.color = Color.RED; paint.isFakeBoldText = true; canvas.drawText("*** FIADO - PENDIENTE ***", centerX, y, paint); paint.color = Color.BLACK; y += 30f; paint.isFakeBoldText = false }
     canvas.drawText("¡Gracias por su compra!", centerX, y, paint)
 
     val cachePath = File(context.cacheDir, "images")

@@ -10,13 +10,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import com.pdv.app.ui.theme.PdvTheme
-import com.pdv.app.ui.theme.PdvTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pdv.app.screens.*
+import com.pdv.app.ui.theme.PdvTheme
 import com.pdv.app.utils.*
 
 class MainActivity : ComponentActivity() {
@@ -46,7 +46,6 @@ fun MainScreen() {
         "Recibos" to Icons.Filled.Receipt
     )
 
-    // Lanzadores para guardar archivos CSV
     val exportProductsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         uri?.let {
             exportarProductosCSV(context, it, inventarioViewModel.productos.value)
@@ -74,35 +73,40 @@ fun MainScreen() {
         topBar = {
             TopAppBar(
                 title = { Text(items[selectedItem].first) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFFF7F3ED),
+                    titleContentColor = Color(0xFF30231F)
+                ),
                 actions = {
                     IconButton(onClick = { showBackupMenu = true }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = "Opciones de Respaldo")
+                        Icon(Icons.Filled.MoreVert, contentDescription = "Opciones", tint = Color(0xFF30231F))
                     }
                     DropdownMenu(expanded = showBackupMenu, onDismissRequest = { showBackupMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Exportar Inventario (CSV)") },
-                            onClick = { exportProductsLauncher.launch("inventario.csv"); showBackupMenu = false }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Exportar Ventas (CSV)") },
-                            onClick = { exportSalesLauncher.launch("ventas.csv"); showBackupMenu = false }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Importar Inventario (CSV)") },
-                            onClick = { importProductsLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "application/csv")); showBackupMenu = false }
-                        )
+                        DropdownMenuItem(text = { Text("Exportar Inventario (CSV)") }, onClick = { exportProductsLauncher.launch("inventario.csv"); showBackupMenu = false })
+                        DropdownMenuItem(text = { Text("Exportar Ventas (CSV)") }, onClick = { exportSalesLauncher.launch("ventas.csv"); showBackupMenu = false })
+                        DropdownMenuItem(text = { Text("Importar Inventario (CSV)") }, onClick = { importProductsLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "application/csv")); showBackupMenu = false })
                     }
                 }
             )
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = Color(0xFFF7F3ED), // Color crema forzado
+                contentColor = Color(0xFF30231F)
+            ) {
                 items.forEachIndexed { index, item ->
                     NavigationBarItem(
                         icon = { Icon(item.second, contentDescription = item.first) },
                         label = { Text(item.first) },
                         selected = selectedItem == index,
-                        onClick = { selectedItem = index }
+                        onClick = { selectedItem = index },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color(0xFF5D4037),
+                            selectedTextColor = Color(0xFF5D4037),
+                            indicatorColor = Color(0xFFE5D8CA), // Beige
+                            unselectedIconColor = Color(0xFF30231F).copy(alpha = 0.6f),
+                            unselectedTextColor = Color(0xFF30231F).copy(alpha = 0.6f)
+                        )
                     )
                 }
             }

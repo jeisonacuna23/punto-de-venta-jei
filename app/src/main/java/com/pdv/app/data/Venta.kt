@@ -9,5 +9,7 @@ data class Venta(
     val fecha: Long = System.currentTimeMillis(),
     val total: Double,
     val detalles: String,
-    val cliente: String = ""
+    val cliente: String = "",
+    val metodoPago: String = "Efectivo",
+    val pagado: Boolean = true
 )
