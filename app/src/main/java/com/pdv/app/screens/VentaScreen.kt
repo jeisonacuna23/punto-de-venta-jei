@@ -12,25 +12,27 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pdv.app.VentaViewModel
 import com.pdv.app.data.Product
+import com.pdv.app.data.Venta
 import com.pdv.app.utils.formatCOP
+import com.pdv.app.utils.generarYCompartirRecibo
 
 @Composable
 fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
     val productos by viewModel.productos.collectAsState()
-    // Mapa que guarda el Producto y la cantidad seleccionada
     val carrito = remember { mutableStateMapOf<Product, Int>() }
     
     var showDialog by remember { mutableStateOf(false) }
-    var totalCobrado by remember { mutableStateOf(0.0) }
+    var ventaParaRecibo by remember { mutableStateOf<Venta?>(null) }
+    val context = LocalContext.current
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // --- LISTA DE PRODUCTOS ---
         Text("Toca para agregar al carrito", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
         
         LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 16.dp)) {
@@ -58,7 +60,6 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
             }
         }
 
-        // --- CARRITO ---
         if (carrito.isNotEmpty()) {
             Surface(
                 shadowElevation = 8.dp,
@@ -69,7 +70,6 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                     Text("Carrito de Venta", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     
-                    // Iteramos sobre una copia de las entradas para evitar crasheos al eliminar
                     carrito.entries.toList().forEach { (producto, cantidad) ->
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -78,7 +78,6 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                         ) {
                             Text(producto.nombre, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                             
-                            // Botones para ajustar cantidad
                             IconButton(onClick = {
                                 if (cantidad > 1) carrito[producto] = cantidad - 1 else carrito.remove(producto)
                             }, modifier = Modifier.size(32.dp)) {
@@ -115,7 +114,8 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                     
                     Button(
                         onClick = {
-                            totalCobrado = total
+                            val detallesStr = carrito.entries.joinToString(", ") { "${it.value}x ${it.key.nombre}" }
+                            ventaParaRecibo = Venta(total = total, detalles = detallesStr)
                             viewModel.procesarVenta(carrito.toMap())
                             carrito.clear()
                             showDialog = true
@@ -129,15 +129,22 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
         }
     }
 
-    // Diálogo de confirmación (Preparando el terreno para el Recibo)
-    if (showDialog) {
+    if (showDialog && ventaParaRecibo != null) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
             title = { Text("¡Venta Exitosa!") },
-            text = { Text("Se ha registrado un cobro por ${formatCOP(totalCobrado)}.\nEl stock ha sido actualizado.") },
+            text = { Text("Se ha registrado un cobro por ${formatCOP(ventaParaRecibo!!.total)}.\nEl stock ha sido actualizado.") },
             confirmButton = {
+                Button(onClick = {
+                    showDialog = false
+                    generarYCompartirRecibo(context, ventaParaRecibo!!)
+                }) {
+                    Text("Compartir Recibo")
+                }
+            },
+            dismissButton = {
                 TextButton(onClick = { showDialog = false }) {
-                    Text("Aceptar")
+                    Text("Cerrar")
                 }
             }
         )
