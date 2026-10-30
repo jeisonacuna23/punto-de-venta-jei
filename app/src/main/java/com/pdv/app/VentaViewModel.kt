@@ -35,8 +35,9 @@ class VentaViewModel(application: Application) : AndroidViewModel(application) {
         val clienteCopia = cliente
         
         viewModelScope.launch {
+            // Formato: "2 Pan de Jamón - $4.000"
             val detallesStr = carritoCopia.entries.joinToString(" | ") { 
-                "${it.value}x ${it.key.nombre} @ ${formatCOP(it.key.precio)} = ${formatCOP(it.key.precio * it.value)}" 
+                "${it.value} ${it.key.nombre} - ${formatCOP(it.key.precio * it.value)}" 
             }
             val total = carritoCopia.entries.sumOf { it.key.precio * it.value }
             
@@ -48,7 +49,6 @@ class VentaViewModel(application: Application) : AndroidViewModel(application) {
                 pagado = !esFiado
             )
             
-            // Ahora insertVenta retorna un Long (el ID)
             val idGenerado = ventaDao.insertVenta(nuevaVenta)
             val ventaGuardada = nuevaVenta.copy(id = idGenerado.toInt())
             

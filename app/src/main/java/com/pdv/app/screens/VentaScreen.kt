@@ -18,8 +18,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pdv.app.VentaViewModel
 import com.pdv.app.data.Product
+import com.pdv.app.data.Venta
 import com.pdv.app.utils.formatCOP
-import com.pdv.app.utils.generarYCompartirRecibo
+import com.pdv.app.utils.generarReciboBitmap
+import com.pdv.app.utils.compartirRecibo
 
 @Composable
 fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
@@ -32,7 +34,7 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
     var showRapidaDialog by remember { mutableStateOf(false) }
     var showPagoDialog by remember { mutableStateOf(false) }
     var showExitoDialog by remember { mutableStateOf(false) }
-    var ventaParaRecibo by remember { mutableStateOf<com.pdv.app.data.Venta?>(null) }
+    var ventaParaRecibo by remember { mutableStateOf<Venta?>(null) }
     var itemAEliminar by remember { mutableStateOf<Product?>(null) }
     var showAlertaCliente by remember { mutableStateOf(false) }
     
@@ -235,7 +237,11 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
             title = { Text("¡Venta Exitosa!") },
             text = { Text("Se ha registrado un cobro por ${formatCOP(ventaParaRecibo!!.total)}.\nEl stock ha sido actualizado.") },
             confirmButton = {
-                Button(onClick = { showExitoDialog = false; generarYCompartirRecibo(context, ventaParaRecibo!!) }) { Text("Compartir Recibo") }
+                Button(onClick = { 
+                    showExitoDialog = false
+                    val bitmap = generarReciboBitmap(context, ventaParaRecibo!!)
+                    compartirRecibo(context, bitmap, ventaParaRecibo!!.id)
+                }) { Text("Compartir Recibo") }
             },
             dismissButton = { TextButton(onClick = { showExitoDialog = false }) { Text("Cerrar") } }
         )
