@@ -41,7 +41,6 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
     val context = LocalContext.current
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 1. CLIENTE OBLIGATORIO
         OutlinedTextField(
             value = cliente,
             onValueChange = { viewModel.cliente = it },
@@ -56,7 +55,6 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
             )
         )
 
-        // 2. BOTONES DE ACCIÓN (Buscar y Venta Rápida)
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = { 
@@ -76,12 +74,9 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                     else showRapidaDialog = true 
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF795548))
-            ) {
-                Text("Rápida")
-            }
+            ) { Text("Rápida") }
         }
 
-        // 3. CARRITO (Ocupa el resto de la pantalla)
         if (carrito.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("El carrito está vacío.\nBusca un producto para empezar.", textAlign = TextAlign.Center, color = Color.Gray)
@@ -89,15 +84,8 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
         } else {
             LazyColumn(modifier = Modifier.weight(1f).padding(16.dp)) {
                 items(carrito.entries.toList()) { (producto, cantidad) ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(producto.nombre, fontWeight = FontWeight.Bold, color = Color(0xFF30231F))
                                 Text(formatCOP(producto.precio), style = MaterialTheme.typography.bodySmall)
@@ -121,7 +109,6 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                 }
             }
 
-            // 4. TOTAL Y COBRAR
             Surface(shadowElevation = 8.dp, color = Color.White, modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     val total = carrito.entries.sumOf { it.key.precio * it.value }
@@ -139,7 +126,6 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
         }
     }
 
-    // --- DIÁLOGO DE BÚSQUEDA (Para no mostrar todo el inventario de fondo) ---
     if (showSearchDialog) {
         var searchQuery by remember { mutableStateOf("") }
         val filtrados = productos.filter { it.nombre.contains(searchQuery, ignoreCase = true) }
@@ -172,6 +158,10 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
                                 Column {
                                     Text(prod.nombre, fontWeight = FontWeight.Bold)
                                     Text("Stock: ${prod.stock}", style = MaterialTheme.typography.bodySmall)
+                                    // PUNTO 4: CONTADOR EN EL CARRITO
+                                    if (enCarrito > 0) {
+                                        Text("En carrito: $enCarrito", color = Color(0xFF5D4037), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                                    }
                                 }
                                 Text(formatCOP(prod.precio), fontWeight = FontWeight.Bold, color = Color(0xFF5D4037))
                             }
@@ -186,7 +176,6 @@ fun VentaScreen(viewModel: VentaViewModel = viewModel()) {
         )
     }
 
-    // --- RESTO DE DIÁLOGOS (Forzados a color blanco) ---
     if (showAlertaCliente) {
         AlertDialog(
             onDismissRequest = { showAlertaCliente = false },
